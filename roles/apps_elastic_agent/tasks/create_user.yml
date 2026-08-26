@@ -1,0 +1,15 @@
+---
+- name: "Creating user group"
+  ansible.builtin.group:
+    name: "{{ elastic_agent_group }}"
+    state: present
+  become: true
+
+- name: "Creating user"
+  ansible.builtin.user:
+    createhome: false
+    group: "{{ elastic_agent_group }}"
+    name: "{{ elastic_agent_user }}"
+    shell: /bin/false
+    system: true
+  become: true

@@ -1,0 +1,8 @@
+---
+win_arch_map:
+  32-bit: '386'
+  64-bit: 'amd64'
+
+win_arch: "{{ win_arch_map[ansible_architecture] | default(ansible_architecture) }}"
+
+windows_exporter_install_dir: 'C:\Program Files\windows_exporter'

@@ -1,0 +1,76 @@
+---
+### Install
+elastic_agent_install_method: src
+elastic_agent_install_force: false
+
+### SRC install
+elastic_agent_group: "root"
+elastic_agent_user: "root"
+elastic_agent_install_origin: internet  # or internet
+elastic_agent_dl_executor: host  # or localhost
+elastic_agent_version: "9.0.3"  # or latest
+elastic_agent_distrib: "linux"
+elastic_agent_arch: "x86_64"
+elastic_agent_pkg_name: "elastic-agent-{{ elastic_agent_version }}-{{ elastic_agent_distrib }}-{{ elastic_agent_arch }}.tar.gz"
+elastic_agent_dl_url: "https://artifacts.elastic.co/downloads/beats/elastic-agent/{{ elastic_agent_pkg_name }}"
+elastic_agent_temp_dir: "/tmp"
+
+# if elastic_agent_install_origin: local
+elastic_agent_local_files: "~/Downloads/shared-files/{{ role_path | basename }}/{{ elastic_agent_pkg_name }}"
+
+### Config
+elastic_agent_disable_swap: false
+elastic_agent_config_path: "/opt/Elastic/Agent"
+elastic_agent_install_flags: ""
+#  --fleet-server-es=http://localhost:9200
+#  --fleet-server-service-token=xxxxxxxxxxxxxxxxxxxxxxxx
+#  --fleet-server-policy=fleet-server-policy
+#  --fleet-server-port=8220
+#  --install-servers
+## Agent exemple
+#  --url=https://kibana_url:443 --enrollment-token=xxxxxxxxxxxxxxxxxxx
+#
+elastic_agent_config: ""
+  #  inputs:
+  #    - type: filestream
+  #      id: unique-id-per-input
+  #      paths:
+  #        - /var/log/log-file.log
+  #      prospector:
+  #        scanner:
+  #          fingerprint:
+  #            enabled: false
+  #            offset: 0
+  #            length: 64
+  #  outputs:
+  #    default:
+  #      type: logstash
+  #      hosts:
+  #        - 'logstash-aggregator:5044'
+
+elastic_agent_config_d: []
+  #  - name: syslog
+  #    content: |
+  #      inputs:
+  #        - type: syslog
+  #          id: syslog
+  #          format: auto
+  #          protocol.udp:
+  #            path: "localhost:5142"
+  #  - name: docker
+  #    content: |
+  #      inputs:
+  #        - type: filestream
+  #          id: docker
+  #          prospector.scanner.symlinks: true
+  #          parsers:
+  #            - container:
+  #                format: auto
+  #          paths:
+  #            - '/data/docker/containers/${docker.container.id}/*-json.log'
+  #          prospector:
+  #            scanner:
+  #              fingerprint:
+  #                enabled: false
+  #                offset: 0
+  #                length: 64

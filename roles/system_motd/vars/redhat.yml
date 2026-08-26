@@ -1,0 +1,5 @@
+---
+__motd_config_path: "/etc/motd.d"
+__motd_default_remove:
+  - cockpit
+  - insights-client

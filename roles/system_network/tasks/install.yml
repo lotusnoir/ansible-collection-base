@@ -1,0 +1,33 @@
+---
+- name: "DEBIAN | Install requirement"
+  ansible.builtin.package:
+    name: "{{ network_packages }}"
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  when: ansible_facts.os_family == 'Debian'
+
+- name: "Set primary ip"
+  ansible.builtin.template:
+    src: interfaces.j2
+    dest: /etc/network/interfaces
+    owner: root
+    group: root
+    mode: '0644'
+  when:
+    - network_static_primary is defined
+    - network_static_primary|length > 0
+
+- name: "Add adidtionnal ips"
+  ansible.builtin.template:
+    src: other_interfaces.j2
+    dest: /etc/network/interfaces.d/other_interfaces
+    owner: root
+    group: root
+    mode: '0644'
+  notify: "Restart addtional interfaces"
+  when:
+    - network_addtionnal_ips is defined
+    - network_addtionnal_ips|length > 0

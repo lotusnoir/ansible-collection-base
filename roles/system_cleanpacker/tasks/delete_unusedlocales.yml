@@ -1,0 +1,18 @@
+---
+# find /usr/share/locale -mindepth 1 -maxdepth 1 ! -name 'fr' !  -name 'en_US*' ! -name 'en' |xargs rm -r
+- name: Capture locales to delete
+  ansible.builtin.find:
+    paths: /usr/share/locale
+    file_type: directory
+    recurse: false
+    excludes: "{{ cleanpacker_locales_keep }}"
+  register: found_files
+
+# - debug:
+#     var: found_files.files  | map(attribute='path') | list
+
+- name: Delete locales in bulk
+  ansible.builtin.shell: >
+    rm -rf {{ found_files.files | map(attribute='path') | join(' ') }}
+  changed_when: false
+  when: found_files.matched > 0

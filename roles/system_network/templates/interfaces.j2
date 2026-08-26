@@ -1,0 +1,16 @@
+{{ ansible_managed | comment }}
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+# The primary network interface
+auto {{ network_primary_ip.interface | default (ansible_default_ipv4.interface) }} 
+iface {{ network_primary_ip.interface | default (ansible_default_ipv4.interface) }} inet static
+    address {{ network_primary_ip.address | default (ansible_default_ipv4.address) }}
+    netmask {{ network_primary_ip.netmask default(ansible_default_ipv4.netmask) }}
+    gateway {{ network_primary_ip.gateway | default(ansible_default_ipv4.gateway) }}
+    mtu {{ network_primary_ip.mtu | default("1500") }}
+
+# Addtional interfaces
+source /etc/network/interfaces.d/*

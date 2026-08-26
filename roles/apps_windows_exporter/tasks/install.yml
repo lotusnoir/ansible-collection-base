@@ -1,0 +1,56 @@
+---
+- name: "Check if windows_exporter is installed"
+  ansible.windows.win_stat:
+    path: '{{ windows_exporter_install_dir }}'
+  register: windows_exporter_is_installed
+
+- name: "Gather installed windows_exporter version"
+  community.windows.win_file_version:
+    path: '{{ windows_exporter_install_dir }}\windows_exporter.exe'
+  changed_when: false
+  register: windows_exporter_current_version_output
+  when: windows_exporter_is_installed.stat.exists
+
+### Install from internet
+- name: "Install from internet"
+  when: windows_exporter_localmsi_path | length == 0
+  block:
+    - name: "Download windows_exporter package"
+      ansible.windows.win_get_url:
+        url: '{{ windows_exporter_url }}'
+        dest: "{{ windows_exporter_download_dir }}"
+      register: _download_installer
+      until: _download_installer is succeeded
+      retries: 5
+      delay: 2
+
+    - name: "Install windows_exporter package"
+      ansible.windows.win_command: |
+        msiexec /i windows_exporter-{{ windows_exporter_version }}-{{ win_arch }}.msi
+        ENABLED_COLLECTORS="ad,adfs,cache,cpu,cpu_info,cs,container,dfsr,dhcp,dns,fsrmquota,iis,logical_disk,logon,memory,msmq,mssql,netframework_clrexceptions,netframework_clrinterop,netframework_clrjit,netframework_clrloading,netframework_clrlocksandthreads,netframework_clrmemory,netframework_clrremoting,netframework_clrsecurity,net,os,process,remote_fx,service,tcp,time,vmware"
+        TEXTFILE_DIR="C:\custom_metrics"
+        LISTEN_PORT="{{ windows_exporter_listen_port }}"
+      args:
+        chdir: "{{ windows_exporter_download_dir }}"
+      register: _installedwindows_exporter
+      notify: Remove installer msi package
+
+### Install from file
+- name: "Install from file"
+  when: windows_exporter_localmsi_path | length > 0
+  block:
+    - name: "Copy windows_exporter package"
+      ansible.windows.win_copy:
+        src: '{{ windows_exporter_msi_path }}'
+        dest: "{{ windows_exporter_download_dir }}"
+        remote_src: "{{ windows_exporter_msi_remote_src }}"
+      register: _windows_exporter_copied
+
+    - name: "Install windows_exporter package"
+      ansible.windows.win_command: |
+        msiexec /i {{ _windows_exporter_copied.dest }}
+        ENABLED_COLLECTORS="ad,adfs,cache,cpu,cpu_info,cs,container,dfsr,dhcp,dns,fsrmquota,iis,logical_disk,logon,memory,msmq,mssql,netframework_clrexceptions,netframework_clrinterop,netframework_clrjit,netframework_clrloading,netframework_clrlocksandthreads,netframework_clrmemory,netframework_clrremoting,netframework_clrsecurity,net,os,process,remote_fx,service,tcp,time,vmware"
+        TEXTFILE_DIR="C:\custom_metrics"
+        LISTEN_PORT="{{ windows_exporter_listen_port }}"
+      register: _installedwindows_exporter
+      notify: Remove installer package

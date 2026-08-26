@@ -1,0 +1,20 @@
+---
+- name: Autoriser ICMPv4 Echo Request entrant
+  community.windows.win_firewall_rule:
+    name: "Allow ICMPv4 Echo Request"
+    description: "Autorise les requetes ping entrantes"
+    direction: in
+    action: allow
+    protocol: icmpv4
+    icmp_type_code: "8:*"
+    enabled: true
+    state: present
+
+# - name: Allow ICMPv4 Echo Request (ping)
+#   ansible.windows.win_shell: |
+#     New-NetFirewallRule `
+#       -DisplayName "Allow ICMPv4 Echo Request" `
+#       -Protocol ICMPv4 `
+#       -IcmpType 8 `
+#       -Direction Inbound `
+#       -Action Allow

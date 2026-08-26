@@ -1,0 +1,22 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    local_groups:
+      - name: "titi"
+        system: true
+
+    local_users:
+      - name: "titi"
+        shell: "/usr/sbin/nologin"
+        home: /tmp/titi
+        create_home: true
+        system: true
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-system_local_users

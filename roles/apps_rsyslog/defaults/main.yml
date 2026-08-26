@@ -1,0 +1,121 @@
+---
+rsyslog_user: root
+rsyslog_group: adm
+
+# Main rsyslog.conf
+rsyslog_working_dir: "/var/spool/rsyslog"
+
+rsyslog_modules_conf: |
+  module(load="imuxsock")
+  module(load="imklog" permitnonkernelfacility="on")
+  module(load="imfile")
+
+rsyslog_global_conf: |
+  $ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
+  $RepeatedMsgReduction on
+  $FileOwner root
+  $FileGroup adm
+  $FileCreateMode 0640
+  $DirCreateMode 2755
+  $Umask 0022
+  #$PrivDropToUser root
+  #$PrivDropToGroup adm
+  $WorkDirectory {{ rsyslog_working_dir }}
+  $IncludeConfig /etc/rsyslog.d/*.conf
+
+rsyslog_rules_conf: |
+  auth,authpriv.*         /var/log/auth.log
+  *.*;auth,authpriv.none  -/var/log/syslog
+  kern.*                  -/var/log/kern.log
+  mail.*                  -/var/log/mail.log
+  mail.err                /var/log/mail.err
+  *.emerg                 :omusrmsg:*
+
+# Create specific log file
+rsyslog_d_custom: []
+#  - name: 10-ignore-systemd-gpg.conf
+#    content: |
+#      if ($programname == "systemd") and ($msg contains "Listening on GnuPG" or $msg contains "Closed GnuPG") then stop
+#  - name: 10-ignore-systemd-session-slice.conf
+#    content: |
+#      if ($programname == "systemd") and ($msg contains "Created slice User Slice of ") then stop
+#      if ($programname == "systemd") and ($msg contains "Started Session ") then stop
+#      if ($programname == "systemd") and ($msg contains "Reached target ") then stop
+#      if ($programname == "systemd") and ($msg contains "Started User Manager for UID ") then stop
+#      if ($programname == "systemd") and ($msg contains "Stopping User Manager for UID ") then stop
+#      if ($programname == "systemd") and ($msg contains "Stopped target ") then stop
+#      if ($programname == "systemd") and ($msg contains "Reached target Shutdown") then stop
+#      if ($programname == "systemd") and ($msg contains "Starting Exit the Session.") then stop
+#      if ($programname == "systemd") and ($msg contains "Removed slice User Slice of ") then stop
+#  - name: 10-ignore-sshd-deprecated-option.conf
+#    content: |
+#      if ($programname == "sshd") and ($msg contains "Deprecated option ") then stop
+#  - name: 10-ignore-bash-completion-error.conf
+#    content: |
+#      if $programname == "nslcd" and ($msg contains "request denied by validnames option") then stop
+#  - name: 10-ignore-ufw_ack.conf
+#    content: |
+#      if $programname == "kernel" and ($msg contains "[UFW BLOCK]" and $msg contains "ACK FIN URGP=0") then stop
+#
+#  - name: 15-forward
+#    content: |
+#      *.* action(type="omfwd" Target="127.0.0.1" Port="5140" Protocol="udp"
+#          queue.filename="omfwd_queue"
+#          queue.spoolDirectory="/var/lib/rsyslog"
+#          queue.size="300000"
+#          queue.maxdiskspace="536870912"
+#          queue.lowwatermark="20000"
+#          queue.highwatermark="200000"
+#          queue.discardmark="250000"
+#          queue.type="LinkedList"
+#          queue.discardseverity="4"
+#          queue.saveonshutdown="on"
+#          queue.dequeuebatchsize="4"
+#        )
+#
+#  - name: 20-snoopy
+#    content: |
+#      if ($programname startswith "snoopy") then {
+#        action(type="omfile" fileOwner="root" fileGroup="root" fileCreateMode="0600" file="/var/log/snoopy.log")
+#        stop
+#      }
+#  - name: 20-apt
+#    content: |
+#      input(type="imfile"
+#        File="/var/log/apt/history.log"
+#        Tag="apt"
+#        Severity="notice"
+#        Facility="local3"
+#      )
+#      input(type="imfile"
+#        File="/var/log/apt/term.log"
+#        Tag="apt"
+#        Severity="notice"
+#        Facility="local3"
+#      )
+#  - name: 20-ipaclient
+#    content: |
+#      input(type="imfile"
+#        File="/var/log/ipaclient-install.log"
+#        Tag="ipaclient"
+#        Severity="notice"
+#        Facility="local3"
+#      )
+#  - name: 20-sssd
+#    content: |
+#      input(type="imfile"
+#        File="/var/log/sssd/*.log"
+#        Tag="sssd"
+#        Severity="notice"
+#        Facility="local3"
+#      )
+#  - name: 20-ufw
+#    content: |
+#      if not ($msg contains "logstash.dissect.Dissector") and $msg contains "[UFW " then /var/log/ufw.log
+#  - name: 20-cloudinit
+#    content: |
+#      :syslogtag, isequal, "[CLOUDINIT]" /var/log/cloud-init.log
+#      & stop
+
+# Remove installed conf
+rsyslog_d_remove: []

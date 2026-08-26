@@ -1,0 +1,59 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    sssd_svc_start: true
+    sssd_disable_svc_socket: false
+    sssd_create_homedir: true
+    sssd_nssswitch_config:
+      passwd: files sss
+      shadow: files sss
+      group: files sss
+      sudoers: files sss
+      hosts: files dns
+      bootparams: nisplus [NOTFOUND=return] files
+      neters: files
+      netmasks: files
+      networks: files
+      protocols: files
+      rpc: files
+      services: files sss
+      netgroup: files sss
+      publickey: nisplus
+      automount: files
+      aliases: files nisplus
+    sssd_conf_domains:
+      - name: ldap1
+        content: |
+          id_provider = ldap
+          auth_provider = ldap
+          access_provider = ldap
+          cache_credentials = False
+          entry_cache_timeout = 0
+          ldap_uri = ldap://10.1.2.4, ldap://10.1.2.3
+          ldap_schema = rfc2307bis
+          ldap_default_bind_dn = cn=app,ou=users,dc=test,dc=fr
+          ldap_default_authtok = pam
+          ldap_search_base = dc=test,dc=fr
+          ldap_access_filter = memberOf=cn=titi,ou=applications,dc=test,dc=fr
+          ldap_sudo_search_base = ou=sudo,cn=titi,ou=applications,dc=test,dc=fr
+          ldap_id_use_start_tls = True
+          ldap_tls_reqcert = never
+    sssd_conf_sssd: |
+      services = nss, pam, sudo
+      config_file_version = 2
+      domains = ldap1
+    sssd_conf_pam: |
+      reconnection_retries = 3
+    sssd_conf_nss: |
+      override_homedir = /home/%u
+      fallback_homedir = /home/%u
+      default_shell = /bin/bash
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-apps_sssd

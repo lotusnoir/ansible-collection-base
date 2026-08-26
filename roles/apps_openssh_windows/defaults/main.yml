@@ -1,0 +1,14 @@
+---
+openssh_windows_architecture: 64
+openssh_windows_firewall_profiles: domain,private,public
+openssh_windows_install_path: C:\Program Files\OpenSSH
+openssh_windows_port: 22
+openssh_windows_remoteip: any
+openssh_windows_pubkey_auth: true
+openssh_windows_password_auth: true
+openssh_windows_setup_service: true
+openssh_windows_shared_admin_key: false
+openssh_windows_skip_start: false
+openssh_windows_temp_path: C:\Windows\TEMP
+openssh_windows_version: latest
+openssh_windows_zip_remote_src: false

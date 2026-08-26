@@ -1,0 +1,3 @@
+---
+_chrony_exporter_default_version: '0.12.0'
+_chrony_exporter_release_api_url: "https://api.github.com/repos/SuperQ/chrony_exporter/releases/latest"

@@ -1,0 +1,15 @@
+{{ ansible_managed | comment }}
+
+#Controls fetching behavior (what metadata apt downloads)
+Acquire::AllowReleaseInfoChange::Suite "true";
+Acquire::AllowReleaseInfoChange::Origin "true";
+Acquire::AllowReleaseInfoChange::Label "true";
+Acquire::AllowReleaseInfoChange::Version "true";
+Acquire::AllowReleaseInfoChange::Codename "true";
+
+#Controls how apt-get reacts when Release info changes
+APT::Get::AllowReleaseInfoChange::Suite "true";
+APT::Get::AllowReleaseInfoChange::Origin "true";
+APT::Get::AllowReleaseInfoChange::Label "true";
+APT::Get::AllowReleaseInfoChange::Version "true";
+APT::Get::AllowReleaseInfoChange::Codename "true";

@@ -1,0 +1,74 @@
+---
+- name: "Check for rsyslog dir"
+  ansible.builtin.stat:
+    path: "{{ rsyslog_working_dir }}"
+  changed_when: false
+  register: rsyslog_install
+
+- name: "Install tasks"
+  when: not rsyslog_install.stat.exists
+  block:
+    - name: "REDHAT: Add repository"
+      ansible.builtin.yum_repository:
+        name: rsyslog
+        description: "Adiscon RHEL-$releasever - local packages for $basearch"
+        baseurl: "http://rpms.adiscon.com/v8-stable-daily/rhel-$releasever/$basearch"
+        enabled: true
+        gpgcheck: false
+        gpgkey: "https://rpms.adiscon.com/RPM-GPG-KEY-Adiscon"
+        protect: true
+      when: ansible_facts.distribution == 'RedHat'
+
+    - name: "REDHAT: Install rsyslog package"
+      ansible.builtin.package:
+        name: rsyslog
+        state: present
+      register: __pkg_result
+      retries: 12
+      delay: 10
+      until: __pkg_result is success
+
+    - name: "Create {{ rsyslog_working_dir }}"
+      ansible.builtin.file:
+        path: "{{ rsyslog_working_dir }}"
+        owner: "{{ rsyslog_user }}"
+        group: "{{ rsyslog_group }}"
+        mode: "0755"
+        state: directory
+
+    - name: "Start and enable service"
+      ansible.builtin.service:
+        name: rsyslog
+        state: started
+        enabled: true
+        daemon_reload: true
+
+- name: "Update global configuration file"
+  ansible.builtin.template:
+    src: rsyslog.conf.j2
+    dest: /etc/rsyslog.conf
+    owner: "{{ rsyslog_user }}"
+    group: "{{ rsyslog_group }}"
+    mode: "0640"
+  notify: Restart rsyslog
+
+- name: "Add custom configuration files"
+  ansible.builtin.template:
+    src: "custom.conf.j2"
+    dest: "/etc/rsyslog.d/{{  item.name }}.conf"
+    owner: "{{ rsyslog_user }}"
+    group: "{{ rsyslog_group }}"
+    mode: "0640"
+  when:
+    - rsyslog_d_custom is defined and rsyslog_d_custom | length > 0
+  with_items: "{{ rsyslog_d_custom }}"
+  notify: Restart rsyslog
+
+- name: "Remove configurations"
+  ansible.builtin.file:
+    dest: "/etc/rsyslog.d/{{ item }}"
+    state: absent
+  when:
+    - rsyslog_d_remove is defined and rsyslog_d_remove | length > 0
+  with_items: "{{ rsyslog_d_remove }}"
+  notify: Restart rsyslog

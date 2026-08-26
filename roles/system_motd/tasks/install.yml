@@ -1,0 +1,85 @@
+---
+- name: "Install requirements"
+  ansible.builtin.package:
+    name: "{{ motd_requirements }}"
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "REDHAT | Include tasks"
+  ansible.builtin.import_tasks: setup-ubuntu.yml
+  when: ansible_facts.distribution == "Ubuntu"
+
+- name: "UBUNTU | Include tasks"
+  ansible.builtin.import_tasks: setup-redhat.yml
+  when: ansible_facts.os_family == 'RedHat'
+
+- name: "Comment pam_motd in sshd PAM config"
+  ansible.builtin.replace:
+    path: /etc/pam.d/sshd
+    regexp: '^(?!#)(session\s+optional\s+pam_motd\.so.*)'
+    replace: '# \1'
+    backup: true
+  when: motd_disable_pam_sshd
+
+- name: "Remove default motd"
+  become: true
+  ansible.builtin.file:
+    path: "/etc/motd"
+    state: absent
+
+- name: "1/2 Remove all scripts"
+  ansible.builtin.find:
+    paths: "{{ __motd_config_path }}"
+    file_type: file
+  register: motd_files
+  when: motd_script_remove_all | bool
+
+- name: "2/2 Remove all scripts"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ motd_files.files }}"
+  when: motd_script_remove_all | bool
+
+- name: "Remove default scripts"
+  become: true
+  ansible.builtin.file:
+    path: "{{ __motd_config_path }}/{{ item }}"
+    state: absent
+  loop: "{{ __motd_default_remove }}"
+  when:
+    - not motd_script_remove_all | bool
+    - motd_script_remove_default | bool
+
+- name: "Copy local scripts"
+  ansible.builtin.copy:
+    src: "{{ motd_script_local_path }}/"
+    dest: "{{ __motd_config_path }}/"
+    owner: root
+    group: root
+    mode: '0755'
+  when: motd_script_local_path | length > 0
+
+- name: "Copy custom script"
+  become: true
+  ansible.builtin.template:
+    src: "custom.j2"
+    dest: "{{ __motd_config_path }}/{{ item.name }}"
+    owner: root
+    group: root
+    mode: "755"
+  with_items:
+    - "{{ motd_script_content }}"
+  when: motd_script_content | length > 0
+
+- name: "Copy default script"
+  become: true
+  ansible.builtin.template:
+    src: "infos.sh.j2"
+    dest: "{{ __motd_config_path }}/{{ motd_script_default_priority }}-infos"
+    owner: root
+    group: root
+    mode: "755"
+  when: motd_script_default | bool

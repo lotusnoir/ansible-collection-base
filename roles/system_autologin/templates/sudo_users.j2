@@ -1,0 +1,5 @@
+{{ ansible_managed | comment }}
+
+{% for user in autologin_users %}
+{{ user.name }} ALL=(ALL) NOPASSWD: ALL
+{% endfor %}

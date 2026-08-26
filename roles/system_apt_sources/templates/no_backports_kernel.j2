@@ -1,0 +1,11 @@
+Package: linux-image*
+Pin: release n={{ ansible_facts.distribution_release }}-backports
+Pin-Priority: -1
+
+Package: linux-headers*
+Pin: release n={{ ansible_facts.distribution_release }}-backports
+Pin-Priority: -1
+
+Package: linux-kbuild*
+Pin: release n={{ ansible_facts.distribution_release }}-backports
+Pin-Priority: -1

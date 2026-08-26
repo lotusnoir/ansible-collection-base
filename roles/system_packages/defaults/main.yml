@@ -1,0 +1,81 @@
+---
+packages_install_epel_repo: false
+package_repo_yum_cleanup: false
+package_purge_onremove: true
+### For all families and distributions
+# packages_common:
+#   - bash-completion
+#   - file
+#   - lsof
+#   - wget
+#   - netcat
+#   - telnet
+#   - bc
+#   - sudo
+#   - tcpdump
+#   - htop
+#   - net-tools
+#   - parted
+#   - iftop
+#   - strace
+#   - traceroute
+#   - vim
+#   - nmap
+#   - rsync
+#   - curl
+#   - ngrep
+#   - jq
+#   - ncdu
+#   - tree
+#   - gnupg2
+#   - software-properties-common
+#   - qemu-guest-agent
+
+### For specific families
+# packages_family_debian:
+#   - apt-listchanges
+#   - gettext-base
+#   - iputils-ping
+#   - apt-transport-https
+#   - dnsutils
+#   - locate
+#   - python3-apt
+#   - lsb-release
+#   - dirmngr
+#   - ntpstat
+#   - apparmor-utils
+#   - scdaemon
+#   - cracklib-runtime
+
+# packages_family_redhat:
+#   - yum-utils
+#
+#### For specific distribution
+# packages_distrib_ubuntu: []
+# packages_distrib_debian:
+#   - rcconf
+#
+#### For specific distribution major version
+# packages_distrib_ubuntu_22: []
+# packages_distrib_centos_7:
+#   - redhat-lsb-core
+#
+# packages_distrib_oraclelinux_7:
+#   - redhat-lsb-core
+#   - python2-dnf
+#   - policycoreutils-python
+#
+# packages_distrib_oraclelinux_8:
+#   - redhat-lsb-core
+#
+# packages_distrib_rocky_8:
+#   - redhat-lsb-core
+#
+# packages_extra: []
+#
+# There is all the same for removing packages
+# packages_rm_common: []
+# packages_rm_family_redhat: []
+# packages_rm_distrib_ubuntu: []
+# packages_rm_distrib_debian_11: []
+# packages_rm_extra: []

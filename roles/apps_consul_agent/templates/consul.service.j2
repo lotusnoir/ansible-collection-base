@@ -1,0 +1,28 @@
+{{ ansible_managed | comment }}
+{% set consul_binary = consul_agent_symlink_name | default(consul_agent_bin_name, true) %}
+
+[Unit]
+Description="HashiCorp Consul - A service mesh solution"
+Documentation=https://www.consul.io/
+Requires=network-online.target
+After=network-online.target
+ConditionFileNotEmpty={{ consul_agent_config_dir }}/consul.hcl
+
+[Service]
+EnvironmentFile=-/etc/default/consul
+User=consul
+Group=consul
+ExecStart={{ consul_agent_install_dir }}/{{ consul_binary }} agent \
+    	-config-dir={{ consul_agent_config_dir }} \
+	{{ consul_agent_systemd_args | default("") }}
+ExecReload=/bin/kill --signal HUP $MAINPID
+KillMode=process
+KillSignal=SIGTERM
+Restart=on-failure
+LimitNOFILE=65536
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

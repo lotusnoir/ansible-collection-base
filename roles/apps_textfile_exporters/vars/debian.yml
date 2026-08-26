@@ -1,0 +1,5 @@
+---
+__textfile_exporters_requirements:
+  - cron
+  - moreutils
+  - python3-prometheus-client

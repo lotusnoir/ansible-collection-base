@@ -1,0 +1,15 @@
+---
+- name: "Reconfig ssh"
+  ansible.builtin.command: "dpkg-reconfigure openssh-server -u"
+  changed_when: false
+  when: ansible_facts.os_family == 'Debian'
+
+- name: "Restart sshd"
+  ansible.builtin.service:
+    name: sshd
+    state: restarted
+
+- name: "Rebuild initramfs"
+  ansible.builtin.command: dracut -f
+  changed_when: false
+  listen: Rebuild initramfs

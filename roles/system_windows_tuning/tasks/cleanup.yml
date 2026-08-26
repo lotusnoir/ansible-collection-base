@@ -1,0 +1,42 @@
+---
+# - name: "Find All temp files"
+#   win_find:
+#     paths:
+#       - C:\Windows\SoftwareDistribution
+#       - C:\Windows\Temp
+#       - C:\users\*\AppData\Local\Temp
+#       #- C:\users\*\AppData\Local\Microsoft\Windows\Temporary Internet Files
+#     recurse: yes
+#   register: filestoremove
+#
+# - name: "Remove all temp files"
+#   win_file:
+#     path: "{{ item }}"
+#     state: absent
+#   with_items:
+#     - "{{ filestoremove.files | json_query('[].path') }}"
+
+- name: "Cleanup tasks"
+  ansible.windows.win_powershell:
+    script: |
+      ## Stops the windows update service.
+      Get-Service -Name wuauserv | Stop-Service -Force -Verbose -ErrorAction SilentlyContinue
+
+      ## Deletes the contents of windows software distribution.
+      Get-ChildItem "C:\Windows\SoftwareDistribution\*" -Recurse -Force -Verbose -ErrorAction SilentlyContinue | Remove-Item -Force -Verbose -recurse -ErrorAction SilentlyContinue
+
+      ## Deletes the contents of the Windows Temp folder.
+      Get-ChildItem "C:\Windows\Temp\*" -Recurse -Force -Verbose -ErrorAction SilentlyContinue | Remove-Item -Force -Verbose -recurse -ErrorAction SilentlyContinue
+
+      ## Delets all files and folders in user's Temp folder.
+      Get-ChildItem "C:\users\*\AppData\Local\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Force -Verbose -recurse -ErrorAction SilentlyContinue
+
+      ## Remove all files and folders in user's Temporary Internet Files.
+      Get-ChildItem "C:\users\*\AppData\Local\Microsoft\Windows\Temporary Internet Files\*" -Recurse -Force -Verbose -ErrorAction SilentlyContinue | Remove-Item -Force -recurse -ErrorAction SilentlyContinue
+  changed_when: false
+
+- name: "Clear Event Logs"
+  ansible.windows.win_powershell:
+    script: |
+      Write-Output "Clear Event Logs"
+      Get-EventLog -LogName * | ForEach-Object { Clear-EventLog -LogName $_.Log } -Verbose | Out-Null

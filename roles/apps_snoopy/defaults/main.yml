@@ -1,0 +1,21 @@
+---
+snoopy_install_mode: repo
+snoopy_force_install: false
+
+### Source install
+snoopy_version: "2.5.2"
+snoopy_url: "https://github.com/a2o/snoopy/releases/download/snoopy-{{ snoopy_version }}/snoopy-{{ snoopy_version }}.tar.gz"
+snoopy_build_dir: "snoopy-{{ snoopy_version }}"
+snoopy_tmp_dir: /tmp
+snoopy_uninstall_pkg: true
+snoopy_configure_options: "--enable-config-file --sysconfdir=/etc --enable-filtering"
+
+### Repo install
+snoopy_repository_key: "https://a2o.github.io/snoopy-packages/snoopy-packages-key.pub"
+snoopy_repository: "deb https://a2o.github.io/snoopy-packages/repo/{{ ansible_facts.distribution | lower }} {{ ansible_distribution_release }} stable"
+snoopy_repository_file: "snoopy-stable"
+
+### Options
+snoopy_ini_options: ""
+#  output = file:/var/log/snoopy.log
+#  message_format = [%{datetime}] workdir=%{cwd} login=%{login} pid=%{pid}  tty=%{tty} tty_username=%{tty_username} cmdline=%{cmdline}

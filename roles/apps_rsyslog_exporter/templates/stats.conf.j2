@@ -1,0 +1,19 @@
+{{ ansible_managed | comment }}
+
+module(load="omprog")
+
+module(
+  load="impstats"
+  interval="60"
+  format="json"
+  resetCounters="off"
+  ruleset="stats"
+)
+
+ruleset(name="stats") {
+  action(
+    type="omprog"
+    name="stats_exporter"
+    binary="{{ rsyslog_exporter_install_dir }}/{{ rsyslog_exporter_bin_name }} -silent -web.listen-address :{{ rsyslog_exporter_web_port }} -web.telemetry-path={{ rsyslog_exporter_telemetry_path }}"
+  )
+}

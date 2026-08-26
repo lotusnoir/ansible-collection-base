@@ -1,0 +1,45 @@
+---
+- name: "Install requierements"
+  ansible.builtin.package:
+    name: "{{ conntrack_textfile_exporter_pkg }}"
+    state: present
+
+- name: "Ensure install dir exists"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  with_items:
+    - "{{ conntrack_textfile_exporter_log_file | dirname }}"
+    - "{{ conntrack_textfile_exporter_prometheus_file | dirname }}"
+
+- name: "Copy /usr/local/bin/conntrack_textfile_exporter.sh"
+  ansible.builtin.template:
+    src: conntrack_textfile_exporter.sh.j2
+    dest: /usr/local/bin/conntrack_textfile_exporter.sh
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Reset files values
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ conntrack_textfile_exporter_log_file }}"
+    - "{{ conntrack_textfile_exporter_prometheus_file }}"
+  when: conntrack_textfile_exporter_reset_values
+
+- name: "Create systemd for conntrack_textfile_exporter"
+  ansible.builtin.template:
+    src: "conntrack_textfile_exporter.service.j2"
+    dest: "/etc/systemd/system/conntrack_textfile_exporter.service"
+    mode: "0644"
+  notify: "Restart conntrack_textfile_exporter"
+
+- name: "Enable and Start conntrack_textfile_exporter.service"
+  ansible.builtin.service:
+    name: conntrack_textfile_exporter
+    state: started
+    enabled: true
+    daemon_reload: true

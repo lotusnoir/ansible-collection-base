@@ -1,0 +1,13 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    hostname_hosts_file: /etc/hosts2
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-system_hostname

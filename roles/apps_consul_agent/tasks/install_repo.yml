@@ -1,0 +1,73 @@
+---
+- name: "Repo install tasks"
+  when: (not __installed_bin.stat.exists) or consul_agent_install_force
+  block:
+    - name: "Debian tasks"
+      when: ansible_facts.os_family == 'Debian'
+      block:
+        - name: "Ensure required tools are installed"
+          ansible.builtin.apt:
+            name:
+              - gnupg
+              - software-properties-common
+              - apt-transport-https
+            update_cache: true
+
+        - name: "Download GPG key"
+          ansible.builtin.get_url:
+            url: https://apt.releases.hashicorp.com/gpg
+            dest: /tmp/hashicorp.gpg
+            mode: "0644"
+
+        - name: "Convert GPG key to keyring format"
+          ansible.builtin.command: >
+            gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg /tmp/hashicorp.gpg
+          args:
+            creates: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+        - name: "Add HashiCorp repository"
+          ansible.builtin.apt_repository:
+            repo: >-
+              deb [arch={{ consul_agent_arch }} signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg]
+              https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main
+            filename: hashicorp
+            state: present
+
+        - name: "Install application"
+          ansible.builtin.apt:
+            name: consul
+            update_cache: true
+            state: present
+
+    - name: "Redhat tasks"
+      when: ansible_facts.os_family == 'RedHat'
+      block:
+        - name: Ensure yum-utils is installed
+          ansible.builtin.dnf:
+            name: yum-utils
+            state: present
+
+        - name: Add HashiCorp YUM repository
+          ansible.builtin.yum_repository:
+            name: hashicorp
+            description: "HashiCorp Stable - $basearch"
+            baseurl: https://rpm.releases.hashicorp.com/RHEL/$releasever/$basearch/stable
+            gpgcheck: true
+            gpgkey: https://rpm.releases.hashicorp.com/gpg
+            enabled: true
+
+        - name: Install Consul
+          ansible.builtin.dnf:
+            name: consul
+            state: present
+
+    - name: "Create config dir"
+      ansible.builtin.file:
+        path: "{{ item | safe | trim }}"
+        state: directory
+        owner: "{{ consul_agent_user }}"
+        group: "{{ consul_agent_group }}"
+        mode: "0755"
+      loop:
+        - "{{ consul_agent_data_dir }}"
+        - "{{ consul_agent_config_dir }}"

@@ -1,0 +1,38 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  any_errors_fatal: true
+  tasks:
+    - name: "Verify tasks"
+      when: not (ansible_facts.os_family in ['RedHat', 'Rocky', 'OracleLinux'] and ansible_facts.distribution_major_version == '8')
+      block:
+
+        - name: Collect services as facts
+          ansible.builtin.service_facts:
+
+        - name: Check service is running
+          ansible.builtin.assert:
+            that:
+              - "ansible_facts.services['consul.service'].state == 'running'"
+
+        - name: Check if service is runned by good user
+          ansible.builtin.command: "pgrep -u consul consul"
+          register: process_check
+          ignore_errors: true
+          changed_when: false
+
+        - name: Validate process running as correct user
+          ansible.builtin.assert:
+            that: process_check.rc == 0
+            fail_msg: "consul is not running as consul user"
+
+        - name: Collect ports as facts
+          community.general.listen_ports_facts:
+
+        - name: Check port is listening
+          ansible.builtin.assert:
+            that:
+              - "8500 in ansible_facts.tcp_listen | map(attribute='port')"
+              - "8600 in ansible_facts.tcp_listen | map(attribute='port')"
+              - "8301 in ansible_facts.tcp_listen | map(attribute='port')"

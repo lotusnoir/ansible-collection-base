@@ -1,0 +1,23 @@
+---
+- name: Installer cloud-init
+  ansible.builtin.package:
+    name: "{{ _package }}"
+    state: present
+
+- name: Inclure le nettoyage de cloud-init
+  ansible.builtin.include_tasks: clean.yml
+  when: cloudinit_clean|bool
+
+- name: Ajouter les datasource_list
+  ansible.builtin.template:
+    src: 99-datasource_list.cfg.j2
+    dest: /etc/cloud/cloud.cfg.d/99-datasource_list.cfg
+    mode: '0644'
+  when: cloudinit_manage_cfg|bool
+
+- name: Modifier cloud.cfg
+  ansible.builtin.template:
+    src: cloud.cfg.j2
+    dest: /etc/cloud/cloud.cfg
+    mode: '0644'
+  when: cloudinit_manage_cfg|bool

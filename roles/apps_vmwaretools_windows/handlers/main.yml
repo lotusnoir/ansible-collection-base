@@ -1,0 +1,6 @@
+---
+- name: 'Restart vmwaretools windows'
+  ansible.windows.win_service:
+    name: VMTools
+    state: restarted
+  when: not ansible_check_mode

@@ -1,0 +1,46 @@
+---
+- name: Assert Windows OS
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.os_family == "Windows"
+    fail_msg: "This role supports Windows only"
+
+- name: Create installation directory
+  ansible.windows.win_file:
+    path: "{{ blackbox_exporter_install_dir }}"
+    state: directory
+
+- name: Download Blackbox Exporter
+  ansible.windows.win_get_url:
+    url: "{{ blackbox_exporter_download_url }}"
+    dest: "{{ blackbox_exporter_install_dir }}\\blackbox_exporter.zip"
+
+- name: Unzip Blackbox Exporter
+  community.windows.win_unzip:
+    src: "{{ blackbox_exporter_install_dir }}\\blackbox_exporter.zip"
+    dest: "{{ blackbox_exporter_install_dir }}"
+    delete_archive: true
+
+- name: Move blackbox_exporter.exe to install directory
+  ansible.windows.win_copy:
+    src: "{{ blackbox_exporter_install_dir }}\\blackbox_exporter-{{ blackbox_exporter_version }}.windows-amd64\\blackbox_exporter.exe"
+    dest: "{{ blackbox_exporter_install_dir }}\\blackbox_exporter.exe"
+    remote_src: true
+
+- name: Delete extracted Blackbox Exporter directory
+  ansible.windows.win_file:
+    path: "{{ blackbox_exporter_install_dir }}\\blackbox_exporter-{{ blackbox_exporter_version }}.windows-amd64"
+    state: absent
+
+- name: Deploy blackbox configuration
+  ansible.windows.win_template:
+    src: blackbox.yml.j2
+    dest: "{{ blackbox_exporter_install_dir }}\\blackbox.yml"
+  notify: Restart blackbox exporter
+
+- name: "Create a new service with extra details"
+  community.windows.win_nssm:
+    name: blackbox-exporter
+    application: '{{ blackbox_exporter_install_dir }}\\blackbox_exporter.exe'
+    arguments: '--config.file="{{ blackbox_exporter_install_dir }}\\blackbox.yml" --web.listen-address="{{ blackbox_exporter_listen_address }}"'
+    state: started

@@ -1,0 +1,8 @@
+{{ ansible_managed | comment }}
+
+{% for ip in network_addtionnal_ips %}
+auto {{ ip.interface | default(ansible_default_ipv4.interface) }}:{{ loop.index }}
+iface {{ ip.interface | default(ansible_default_ipv4.interface) }}:{{ loop.index }} inet static
+        address {{ ip.address }}
+        netmask {{ ip.netmask | default(ansible_default_ipv4.netmask) }}
+{% endfor %}

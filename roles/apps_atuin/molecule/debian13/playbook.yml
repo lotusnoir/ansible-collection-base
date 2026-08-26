@@ -1,0 +1,17 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    atuin_client_libc_variant: "{{ 'musl' if (
+      ansible_facts.distribution_release == 'bullseye' or
+      (ansible_facts.os_family in ['RedHat','Rocky','OracleLinux'] and ansible_facts.distribution_major_version == '8') or
+      (ansible_facts.distribution == 'Ubuntu' and ansible_facts.distribution_major_version == '20')
+    ) else 'gnu' }}"
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-apps_atuin

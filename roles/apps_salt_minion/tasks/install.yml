@@ -1,0 +1,82 @@
+---
+- name: "Ensure salt minion exist"
+  ansible.builtin.stat:
+    path: "{{ salt_minion_exe }}"
+  register: minion_bin
+
+- name: "Master | Delete existing keys"
+  ansible.builtin.command: "salt-key -d {{ ansible_hostname }} -y"
+  changed_when: false
+  delegate_to: "{{ salt_master_ip }}"
+  when: salt_master_update_keys|bool
+
+## ubuntu18 and debian12 arent supported
+- name: "Import boostrap tasks"
+  ansible.builtin.import_tasks: bootstrap.yml
+  when:
+    - salt_minion_install_method == 'bootstrap'
+    - salt_minion_force_install | bool or not minion_bin.stat.exists
+    - ansible_facts.os_family == 'RedHat'
+      or ansible_facts.distribution == 'Debian'
+      or (ansible_facts.distribution == 'Ubuntu' and (ansible_facts.distribution_major_version | int) >= 20)
+
+- name: "Import repo tasks"
+  ansible.builtin.import_tasks: repo.yml
+  when:
+    - salt_minion_install_method == "repo"
+    - salt_minion_force_install|bool or not minion_bin.stat.exists
+
+- name: "Import src tasks"
+  ansible.builtin.import_tasks: src.yml
+  when:
+    - salt_minion_install_method == "src"
+    - salt_minion_force_install|bool or not minion_bin.stat.exists
+
+- name: "Saltstack minion extra tasks"
+  when:
+    - salt_minion_install_method == 'bootstrap'
+    - ansible_facts.os_family == 'RedHat'
+      or ansible_facts.distribution == 'Debian'
+      or (ansible_facts.distribution == 'Ubuntu' and (ansible_facts.distribution_major_version | int) >= 20)
+  block:
+    - name: "Link minion_id to hostname"
+      ansible.builtin.file:
+        src: "/etc/hostname"
+        dest: "/etc/salt/minion_id"
+        owner: root
+        group: root
+        state: link
+        force: true
+      notify: Restart salt-minion
+
+    - name: "Configure minion"
+      ansible.builtin.copy:
+        dest: "/etc/salt/minion"
+        content: "{{ salt_minion_config }}"
+        mode: "0644"
+      notify: Restart salt-minion
+      when: salt_minion_confighost|bool
+
+    # - name: "Ask Salt-master to acept minion key"
+    #   ansible.builtin.command: 'salt-call event.fire { "minion_id" : "nom_vm" } custom/salt/master/add-minion'
+    #   changed_when: false
+    #   when: salt_master_update_keys|bool
+
+    - name: "Start and enable salt minion"
+      ansible.builtin.service:
+        name: "salt-minion"
+        state: "started"
+        enabled: "yes"
+
+    - name: "Ask Salt-master to acept minion key"
+      ansible.builtin.command: "salt-key -a {{ ansible_hostname }} -y"
+      changed_when: false
+      delegate_to: "{{ salt_master_ip }}"
+      when: salt_master_update_keys|bool
+
+- name: "Ensure salt folder permission"
+  ansible.builtin.file:
+    path: "/opt/saltstack/salt/"
+    owner: "{{ salt_minion_owner }}"
+    group: "{{ salt_minion_group }}"
+    mode: "0755"

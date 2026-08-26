@@ -1,0 +1,51 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+scenario:
+  name: all
+  test_sequence:
+    - destroy
+    - create
+    - prepare
+    - converge
+    - idempotence
+    # - verify
+    - destroy
+
+platforms:
+
+provisioner:
+  name: ansible
+  connection_options:
+    ansible_remote_tmp: /tmp
+    ansible_python_interpreter: auto_silent
+  config_options:
+    defaults:
+      roles_path: "${HOME}/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles:$MOLECULE_PROJECT_DIRECTORY/.."
+      callbacks_enabled: timer, profile_tasks, profile_roles
+      verbosity: 3
+      forks: 20
+      host_key_checking: false
+    ssh_connection:
+      pipelining: true
+      ssh_args: -o ControlMaster=auto -o ControlPersist=600s
+  log: true
+  playbooks:
+    prepare: prepare.yml
+    converge: playbook.yml
+  inventory:
+    group_vars:
+      python3:
+        ansible_python_interpreter: /usr/bin/python3
+    host_vars:
+      bullseye:
+        ansible_python_interpreter: "/usr/bin/python3.9"
+      bookworm:
+        ansible_python_interpreter: "/usr/bin/python3.9"
+      trixie:
+        ansible_python_interpreter: "/usr/bin/python3.9"
+
+verifier:
+  name: ansible

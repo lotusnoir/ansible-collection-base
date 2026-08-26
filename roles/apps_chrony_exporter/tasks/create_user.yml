@@ -1,0 +1,15 @@
+---
+- name: "Creating user group"
+  ansible.builtin.group:
+    name: "{{ chrony_exporter_group }}"
+    state: present
+  become: true
+
+- name: "Creating user"
+  ansible.builtin.user:
+    createhome: false
+    group: "{{ chrony_exporter_group }}"
+    name: "{{ chrony_exporter_user }}"
+    shell: /bin/false
+    system: true
+  become: true

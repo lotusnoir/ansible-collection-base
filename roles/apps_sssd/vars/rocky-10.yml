@@ -1,0 +1,3 @@
+---
+sssd_conf_mode: "0640"
+sssd_conf_group: "sssd"

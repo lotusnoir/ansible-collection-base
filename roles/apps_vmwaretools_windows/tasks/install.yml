@@ -1,0 +1,31 @@
+---
+- name: "Check if vmwaretools is installed"
+  ansible.windows.win_stat:
+    path: 'C:\Program Files\VMware\VMware Tools\vmtoolsd.exe'
+  register: _vmwaretools_is_installed
+
+- name: "Check current VMwaretools version"
+  ansible.windows.win_command: '"C:\Program Files\VMware\VMware Tools\vmtoolsd.exe" --version'
+  failed_when: false
+  changed_when: false
+  register: _vmwaretools_version_check
+
+- name: "Download and unarchive VMwaretools"
+  when:
+    - not _vmwaretools_is_installed.stat.exists
+  block:
+    - name: Create Directory if not exist
+      ansible.windows.win_file:
+        path: C:\temp
+        state: directory
+
+    - name: Download exe to winbox
+      ansible.windows.win_get_url:
+        url: https://packages.vmware.com/tools/esx/latest/windows/x64/VMware-tools-11.1.1-16303738-x86_64.exe
+        dest: C:\temp\VMware-tools-11.1.1-16303738-x86_64.exe
+
+    - name: Install Vmware tools Silent
+      ansible.windows.win_command: C:\temp\VMware-tools-11.1.1-16303738-x86_64.exe /S /v "/qn REBOOT=R ADDLOCAL=ALL REMOVE=Hgfs"
+
+- name: "Include tasks for configure"
+  ansible.builtin.import_tasks: "configure.yml"

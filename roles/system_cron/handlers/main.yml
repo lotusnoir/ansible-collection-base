@@ -1,0 +1,14 @@
+---
+- name: "Restart cron"
+  become: true
+  ansible.builtin.service:
+    name: "cron"
+    state: restarted
+  when: ansible_facts.distribution == 'Debian' or ansible_facts.distribution == 'Ubuntu'
+
+- name: "Rrestart crond"
+  become: true
+  ansible.builtin.service:
+    name: "crond"
+    state: restarted
+  when: ansible_facts.distribution == 'CentOS' or ansible_facts.distribution == 'Red Hat Enterprise Linux'

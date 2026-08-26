@@ -1,0 +1,42 @@
+---
+galaxy_info:
+  author: lotusnoir
+  role_name: apps_atuin
+  description: "Install and Configure atuin to have a better shell history search"
+  license: "Apache License, Version 2.0"
+  min_ansible_version: "2.8"
+
+  platforms:
+    - name: "Ubuntu"
+      versions:
+        - "focal"
+        - "jammy"
+        - "noble"
+        - "resolute"
+    - name: "Debian"
+      versions:
+        - "bookworm"
+        - "bullseye"
+        - "trixie"
+    - name: "Rocky"
+      versions:
+        - "8"
+        - "9"
+        - "10"
+    - name: "OracleLinux"
+      versions:
+        - "8"
+        - "9"
+        - "10"
+    - name: "RedHat"
+      versions:
+        - "8"
+        - "9"
+        - "10"
+
+  galaxy_tags:
+    - system
+    - history
+    - search
+
+dependencies: []

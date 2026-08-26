@@ -1,0 +1,18 @@
+---
+- name: "Check exist /opt/consul/node-id"
+  ansible.builtin.stat:
+    path: /opt/consul/node-id
+  register: node_id
+
+- name: "Special tasks for consul"
+  when: node_id.stat.exists
+  block:
+    - name: "Stop consul service"
+      ansible.builtin.systemd_service:
+        name: consul.service
+        state: stopped
+
+    - name: "Remove /opt/consul/node-id file"
+      ansible.builtin.file:
+        path: /opt/consul/node-id
+        state: absent

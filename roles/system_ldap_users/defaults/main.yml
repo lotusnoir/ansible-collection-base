@@ -1,0 +1,18 @@
+---
+users_ldap_host: freeipa-01.prod
+users_ldap_binddn: "cn=users,cn=accounts,dc=example,dc=net"
+users_ldap_user: "uid=readonly,cn=users,cn=accounts,dc=exemple,dc=net"
+users_ldap_pwd: "xxxxxxxxxxx"
+
+users_ldap_class: "posixAccount"
+users_ldap_ssh_field: "ipaSshPubKey"
+
+users_ldap_nosudo_pwd: true
+users_groups:
+  - sudo
+#  - dev
+#  - readonly
+
+# auth_users:
+#   - { name: "user1", groups: "sudo" }
+#   - { name: "user2", groups: "sudo" }

@@ -1,0 +1,41 @@
+---
+- name: "Install and configure open-vm-tools"
+  when:
+    - ansible_virtualization_type == "VMware"
+  block:
+    - name: "Installing open-vm-tools"
+      ansible.builtin.package:
+        name: "{{ _vmwaretools_pkg }}"
+        state: present
+      register: __pkg_result
+      retries: 12
+      delay: 10
+      until: __pkg_result is success
+
+    - name: "Find interface for primary subnet/ip"
+      ansible.builtin.set_fact:
+        private_interface: "{{ hostvars[inventory_hostname]['ansible_' + item]['device'] }}"
+      when:
+        - hostvars[inventory_hostname]['ansible_' + item].ipv4 is defined
+        - "vmwaretools_primary_int_subnet in hostvars[inventory_hostname]['ansible_' + item]['ipv4']['address']"
+      with_items: "{{ ansible_interfaces }}"
+
+    - name: "Ensure configuration folder exists"
+      ansible.builtin.file:
+        path: /etc/vmware-tools/
+        state: directory
+        mode: "0755"
+        owner: root
+        group: root
+
+    - name: "Create tools configuration"
+      ansible.builtin.template:
+        src: "tools.conf.j2"
+        dest: "/etc/vmware-tools/tools.conf"
+        mode: "0644"
+        owner: root
+        group: root
+      when:
+        - wmwaretools_config is defined
+        - wmwaretools_config | length > 0
+      notify: Restart open-vm-tools

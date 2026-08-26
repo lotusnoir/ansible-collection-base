@@ -1,0 +1,5 @@
+---
+- name: Restart blackbox exporter
+  ansible.windows.win_service:
+    name: "{{ blackbox_exporter_service_name }}"
+    state: restarted

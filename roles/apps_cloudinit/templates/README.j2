@@ -1,0 +1,73 @@
+# {{rolename}}
+
+{% if repoowner != '' or reponame != "" %}[![Maintainer](https://img.shields.io/badge/maintenu%20par-{{ repoowner }}-e00000?style=flat-square)](https://gitlab-mshe.univ-fcomte.fr/{{ repoowner }})
+{% endif %}
+[![Ansible version](https://img.shields.io/badge/ansible-%3E%3D2.10-black.svg?style=flat-square&logo=ansible)](https://github.com/ansible/ansible)
+
+{{role_meta_vars['galaxy_info']['description']}}
+
+**Plates-formes prises en charge :**:
+
+{% if role_meta_vars['galaxy_info']['platforms'] is defined and role_meta_vars['galaxy_info']['platforms']|length() %}
+| Plates-forme | Versions |
+|----------|----------|
+  {% for platform in role_meta_vars['galaxy_info']['platforms'] %}
+| {{ platform['name'] }} | {{  platform['versions']|join(', ') }} |
+  {% endfor %}
+{% else %}
+None.
+{% endif %}
+
+## ⚠️ Prérequis
+
+Ansible >= {{role_meta_vars['galaxy_info']['min_ansible_version']}}.
+
+### Dépendances du rôle Ansible
+
+{% if role_meta_vars['dependencies'] is defined and role_meta_vars['dependencies']|length() %}
+  {% for dependencie in role_meta_vars['dependencies'] %}
+  * {{dependencie}}
+  {% endfor %}
+{% else %}
+Aucune.
+{% endif %}
+
+## ⚡ Installation
+
+### Installer avec git
+
+```bash
+git clone {{ repourl }} {{ rolename }}
+```
+### ✏️ Exemple de Playbook
+
+```yaml
+A ajouter à la main
+```
+
+{# role vars #}
+## ⚙️ Les variables du rôle
+
+Les variables disponibles sont listées ci-dessous, avec leurs valeurs par défaut (voir 'defaults/main.yml') : 
+
+```yaml
+A ajouter à la main
+```
+
+{% if role_meta_vars['galaxy_info']['license'] is defined %}
+
+{# usage guide // doc from md files #}
+  {% if role_docs_md_files is not none %}
+    {% for role_docs_md_file in role_docs_md_files %}
+      {% if 'README' not in role_docs_md_file['filename'] %}
+{{role_docs_md_file['content']}}
+      {% endif %}
+      {% if loop.length > 1 %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+
+{% endif %}
+## Author Information
+
+{{ role_meta_vars['galaxy_info']['company'] }}

@@ -1,0 +1,16 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    locales_present:
+      - en_US.UTF-8
+    locales_default:
+      lang: en_US.UTF-8
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-system_locales

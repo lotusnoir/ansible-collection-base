@@ -1,0 +1,118 @@
+---
+- name: REDHAT | Install languages pack
+  ansible.builtin.dnf:
+    name:
+      - "langpacks-{{ item.split('_')[:1] | join('') }}"
+      - "glibc-langpack-{{ item.split('_')[:1] | join('') }}"
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  with_items: "{{ locales_present }}"
+  when:
+    - locales_present is defined
+    - locales_present | length > 0
+
+- name: REDHAT | Remove languages pack
+  ansible.builtin.dnf:
+    name:
+      - "langpacks-{{ item.split('_')[:1] | join('') }}"
+      - "glibc-langpack-{{ item.split('_')[:1] | join('') }}"
+    state: absent
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  with_items: "{{ locales_absent }}"
+  when:
+    - locales_absent is defined
+    - locales_absent | length > 0
+
+- name: REDHAT | Install keyboard pack
+  ansible.builtin.dnf:
+    name:
+      - "kbd"
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: REDHAT | Set default locale
+  ansible.builtin.command: "localectl set-locale LANG={{ locales_default.lang }}"
+  changed_when: false
+
+- name: REDHAT | Set lc_address locale
+  ansible.builtin.command: "localectl set-locale LC_ADDRESS={{ locales_default.lc_address }}"
+  changed_when: false
+  when: locales_default.lc_address is defined
+
+- name: REDHAT | Set lc_all locale
+  ansible.builtin.command: "localectl set-locale LC_ALL={{ locales_default.lc_all }}"
+  changed_when: false
+  when: locales_default.lc_all is defined
+
+- name: REDHAT | Set lc_collate locale
+  ansible.builtin.command: "localectl set-locale LC_COLLATE={{ locales_default.lc_collate }}"
+  changed_when: false
+  when: locales_default.lc_collate is defined
+
+- name: REDHAT | Set lc_ctype locale
+  ansible.builtin.command: "localectl set-locale LC_CTYPE={{ locales_default.lc_ctype }}"
+  changed_when: false
+  when: locales_default.lc_ctype is defined
+
+- name: REDHAT | Set lc_identification locale
+  ansible.builtin.command: "localectl set-locale LC_IDENTIFICATION={{ locales_default.lc_identification }}"
+  changed_when: false
+  when: locales_default.lc_identification is defined
+
+- name: REDHAT | Set lc_measurement locale
+  ansible.builtin.command: "localectl set-locale LC_MEASUREMENT={{ locales_default.lc_measurement }}"
+  changed_when: false
+  when: locales_default.lc_measurement is defined
+
+- name: REDHAT | Set lc_messages locale
+  ansible.builtin.command: "localectl set-locale LC_MESSAGES={{ locales_default.lc_messages }}"
+  changed_when: false
+  when: locales_default.lc_messages is defined
+
+- name: REDHAT | Set lc_monetary locale
+  ansible.builtin.command: "localectl set-locale LC_MONETARY={{ locales_default.lc_monetary }}"
+  changed_when: false
+  when: locales_default.lc_monetary is defined
+
+- name: REDHAT | Set lc_name locale
+  ansible.builtin.command: "localectl set-locale LC_NAME={{ locales_default.lc_name }}"
+  changed_when: false
+  when: locales_default.lc_name is defined
+
+- name: REDHAT | Set lc_numeric locale
+  ansible.builtin.command: "localectl set-locale LC_NUMERIC={{ locales_default.lc_numeric }}"
+  changed_when: false
+  when: locales_default.lc_numeric is defined
+
+- name: REDHAT | Set lc_paper locale
+  ansible.builtin.command: "localectl set-locale LC_PAPER={{ locales_default.lc_paper }}"
+  changed_when: false
+  when: locales_default.lc_paper is defined
+
+- name: REDHAT | Set lc_response locale
+  ansible.builtin.command: "localectl set-locale LC_RESPONSE={{ locales_default.lc_response }}"
+  changed_when: false
+  when: locales_default.lc_response is defined
+
+- name: REDHAT | Set lc_telephone locale
+  ansible.builtin.command: "localectl set-locale LC_TELEPHONE={{ locales_default.lc_telephone }}"
+  changed_when: false
+  when: locales_default.lc_telephone is defined
+
+- name: REDHAT | Set lc_time locale
+  ansible.builtin.command: "localectl set-locale LC_TIME={{ locales_default.lc_time }}"
+  changed_when: false
+  when: locales_default.lc_time is defined
+
+- name: Set localectl keymap (RHEL/systemd-based)
+  ansible.builtin.command: localectl set-keymap {{ locales_keyboard_layout }}
+  changed_when: false

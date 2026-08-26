@@ -1,0 +1,43 @@
+---
+- name: "Check for snoopy installation"
+  ansible.builtin.stat:
+    path: '{{ _snoopy_exec_path }}/snoopyctl'
+  changed_when: false
+  register: snoopy_binary
+
+- name: "Installation"
+  when: not snoopy_binary.stat.exists or snoopy_force_install|bool
+  block:
+    - name: "Install by repository"
+      when: snoopy_install_mode == 'repo'
+      block:
+        - name: "Debian tasks"
+          ansible.builtin.include_tasks: setup-debian.yml
+          when:
+            - ansible_facts.os_family == 'Debian'
+
+        - name: "Redhat tasks"
+          ansible.builtin.include_tasks: setup-redhat.yml
+          when:
+            - ansible_facts.os_family == 'RedHat' or ansible_facts.distribution == 'OracleLinux'
+
+        - name: "Install snoopy package"
+          ansible.builtin.package:
+            name: "snoopy"
+            state: present
+          register: __pkg_result
+          retries: 12
+          delay: 10
+          until: __pkg_result is success
+
+    - name: "Install by sources"
+      ansible.builtin.include_tasks: src.yml
+      when: snoopy_install_mode == 'src'
+
+- name: "Set config"
+  ansible.builtin.template:
+    src: snoopy.ini.j2
+    dest: '{{ _snoopy_cfg_file }}'
+    owner: root
+    group: root
+    mode: '0644'

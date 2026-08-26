@@ -1,0 +1,49 @@
+---
+- name: "Check if firefox already installed"
+  ansible.windows.win_stat:
+    path: "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
+  register: firefox_info
+
+- name: "Download and install"
+  when: not firefox_info.stat.exists
+  block:
+    - name: Créer le répertoire temporaire
+      ansible.windows.win_file:
+        path: C:\\temp
+        state: directory
+    
+    - name: "Download Firefox"
+      ansible.windows.win_get_url:
+        url: "{{ firefox_url }}"
+        dest: C:\\temp\\firefox.msi
+        force: yes
+    
+    - name: "Extract Firefox Product ID from MSI"
+      ansible.windows.win_shell: |
+        $msi = "C:\\temp\\firefox.msi"
+        $installer = New-Object -ComObject WindowsInstaller.Installer
+        $database = $installer.GetType().InvokeMember(
+          "OpenDatabase",
+          "InvokeMethod",
+          $null,
+          $installer,
+          @($msi, 0)
+        )
+        $view = $database.OpenView("SELECT Value FROM Property WHERE Property='ProductCode'")
+        $view.Execute()
+        $record = $view.Fetch()
+        $record.StringData(1)
+      register: firefox_product_id
+      changed_when: false
+    
+    - name: "Install Firefox"
+      ansible.windows.win_package:
+        path: C:\\temp\\firefox.msi
+        product_id: "{{ firefox_product_id.stdout | trim }}"
+        state: present
+      when: firefox_product_id.stdout | trim != ""
+    
+    - name: "Clean"
+      ansible.windows.win_file:
+        path: C:\\temp
+        state: absent

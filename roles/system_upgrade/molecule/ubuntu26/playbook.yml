@@ -1,0 +1,22 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    upgrade_simulation: false
+    upgrade_pkgs_confirmation: false
+    upgrade_reboot_confirmation: false
+    upgrade_autoreboot: true
+    upgrade_clean: true
+    upgrade_hold_pkg:
+      - openssl*
+      - openssh*
+    upgrade_unhold_pkg:
+      - dbus
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-system_upgrade

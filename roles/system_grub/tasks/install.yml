@@ -1,0 +1,100 @@
+---
+- name: "Install required packages"
+  ansible.builtin.package:
+    name: "{{ grub_packages }}"
+    state: present
+
+# - name: "Check if /etc/default/grub exist"
+#   ansible.builtin.stat:
+#     path: /etc/default/grub
+#   register: grub_default
+#
+# - name: "Create /etc/default/grub"
+#   ansible.builtin.file:
+#     path: /etc/default/grub
+#     state: touch
+#     owner: root
+#     group: root
+#     mode: 0644
+#   when:
+#     - grub_default.stat.exists is defined
+#     - not grub_default.stat.exists
+
+- name: "Cleaning default file, remove all comments and empty lines"
+  ansible.builtin.lineinfile:
+    path: "{{ grub_default_path }}"
+    regexp: "{{ item }}"
+    state: absent
+  loop:
+    - "^#"
+    - "^$"
+
+- name: "Set complete grub options"
+  ansible.builtin.lineinfile:
+    path: "{{ grub_default_path }}"
+    regexp: "^{{ item.name }}="
+    line: '{{ item.name }}="{{ item.value }}"'
+    # validate: "{{ _grub_validation[ansible_facts.distribution] | default(_grub_validation['default']) }} /etc/default/grub"
+    create: true
+    mode: "0664"
+  with_items: "{{ grub_options }}"
+  when:
+    - grub_options is defined
+  notify:
+    - Update grub
+
+- name: "Add options to existing GRUB_CMDLINE_LINUX"
+  ansible.builtin.replace:
+    path: "{{ grub_default_path }}"
+    regexp: '^GRUB_CMDLINE_LINUX="((:?(?!{{ item.option }}={{ item.value }}).)*?)"$'
+    replace: 'GRUB_CMDLINE_LINUX="\1 {{ item.option }}={{ item.value }}"'
+    validate: /bin/sh %s
+    mode: "0664"
+  loop: "{{ grub_add_cmdline }}"
+  loop_control:
+    label: "{{ item.option }}"
+  when:
+    - grub_add_cmdline is defined
+    - grub_add_cmdline | length > 0
+  notify:
+    - Update grub
+
+- name: "Add content on grud.d config files"
+  ansible.builtin.blockinfile:
+    path: "/etc/grub.d/{{ item.file }}"
+    block: "{{ item.value }}"
+    create: true
+    mode: "0755"
+  with_items:
+    - "{{ grub_add_filed }}"
+  when:
+    - grub_add_filed is defined
+    - grub_add_filed | length > 0
+    - item.regex is not defined
+  notify:
+    - Update grub
+
+- name: "Change content on grud.d config files"
+  ansible.builtin.replace:
+    path: "/etc/grub.d/{{ item.file }}"
+    regexp: "{{ item.regex }}"
+    replace: "{{ item.value }}"
+  notify:
+    - Update grub
+  with_items:
+    - "{{ grub_add_filed }}"
+  when:
+    - grub_add_filed is defined
+    - grub_add_filed | length > 0
+    - item.regex is defined
+
+- name: "Securise Grub bootloader"
+  ansible.builtin.file:
+    path: "{{ grub_boot_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  when: grub_sec_bootloader|bool
+
+- name: "Flush handlers"
+  ansible.builtin.meta: flush_handlers

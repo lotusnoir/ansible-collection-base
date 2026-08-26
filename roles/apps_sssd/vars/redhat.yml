@@ -1,0 +1,2 @@
+---
+sssd_nsswitch_path: /etc/authselect/user-nsswitch.conf

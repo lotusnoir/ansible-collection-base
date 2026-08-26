@@ -1,0 +1,51 @@
+---
+- name: DEBIAN | Updating Apt Cache
+  ansible.builtin.apt:
+    update_cache: true
+  become: true
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: DEBIAN | installing pre-reqs
+  ansible.builtin.apt:
+    name:
+      - lvm2
+      - scsitools
+    state: present
+  become: true
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: DEBIAN | install xfs tools
+  ansible.builtin.apt:
+    name: xfsprogs
+    state: present
+  become: true
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  loop: "{{ lvm_groups | subelements('lvnames') }}"
+  when:
+    - item.1 is defined
+    - item.1 != 'None'
+    - item.1.filesystem is defined
+    - item.1.filesystem == "xfs"
+    - item.1.create is defined
+    - item.1.create|bool
+
+- name: DEBIAN | checking for scsi devices
+  ansible.builtin.command: sg_scan
+  become: true
+  register: scsi_devices
+  changed_when: false
+
+- name: DEBIAN | rescanning for new disks added
+  ansible.builtin.command: "{{ rescan_scsi_command }}"
+  become: true
+  changed_when: false
+  when: scsi_devices['stdout'] | length > 0

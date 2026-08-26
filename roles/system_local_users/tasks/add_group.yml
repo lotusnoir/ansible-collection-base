@@ -1,0 +1,10 @@
+---
+- name: "Add or remove groups"
+  ansible.builtin.group:
+    name: "{{ group.name }}"
+    state: "{{ group.state | default('present') }}"
+    gid: "{{ group.gid | default(omit) }}"
+    system: "{{ group.system | default(omit) }}"
+  with_items: "{{ local_groups | default([]) }}"
+  loop_control:
+    loop_var: group

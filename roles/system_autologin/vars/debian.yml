@@ -1,0 +1,4 @@
+---
+autologin_home_path: "/home"
+autologin_group: root
+autologin_sudoersd_path: "/etc/sudoers.d"

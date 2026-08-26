@@ -1,0 +1,16 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  any_errors_fatal: true
+  tasks:
+    - name: "Verify tasks"
+      when: not (ansible_facts.os_family in ['RedHat', 'Rocky', 'OracleLinux'] and ansible_facts.distribution_major_version == '8')
+      block:
+        - name: Collect packages as facts
+          ansible.builtin.package_facts:
+
+        - name: Check package installed
+          ansible.builtin.assert:
+            that:
+              - "'jq' in ansible_facts.packages"

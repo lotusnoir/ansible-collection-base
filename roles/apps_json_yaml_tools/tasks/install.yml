@@ -1,0 +1,6 @@
+---
+- name: "Install jq"
+  ansible.builtin.include_tasks: install_json.yml
+
+- name: "Install yq"
+  ansible.builtin.include_tasks: install_yaml.yml

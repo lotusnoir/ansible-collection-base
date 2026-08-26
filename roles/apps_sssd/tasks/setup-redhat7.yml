@@ -1,0 +1,68 @@
+---
+- name: "REDHAT-7 | Add sudoers on nsswitch"
+  ansible.builtin.lineinfile:
+    path: "/etc/nsswitch.conf"
+    regexp: "^sudoers:"
+    line: "sudoers:    files sss"
+    state: present
+  notify: Restart sssd
+
+- name: "REDHAT-7 | Configure pam"
+  ansible.builtin.lineinfile:
+    path: "{{ item }}"
+    regexp: "^session     optional      pam_mkhomedir.so"
+    line: "session     optional      pam_mkhomedir.so skel=/etc/skel umask={{ sssd_umask }}"
+    state: present
+  notify: Restart sssd
+  with_items:
+    - "/etc/pam.d/system-auth-local"
+    - "/etc/pam.d/password-auth-local"
+  when: sssd_pam_devsec_config|bool
+
+- name: "REDHAT-7 | Configure pam"
+  ansible.builtin.copy:
+    dest: "{{ item }}"
+    mode: '0644'
+    content: |
+      #%PAM-1.0
+      auth        required      pam_env.so
+      auth        required      pam_faildelay.so delay=2000000
+      auth        required      pam_faillock.so preauth silent audit even_deny_root deny=5 unlock_time=600
+      auth        [default=1 ignore=ignore success=ok] pam_succeed_if.so uid >= 1000 quiet
+      auth        [default=1 ignore=ignore success=ok] pam_localuser.so
+      auth        sufficient    pam_unix.so nullok try_first_pass
+      auth        [default=1 ignore=ignore success=ok] pam_succeed_if.so uid >= 1000 quiet
+      auth        sufficient    pam_sss.so forward_pass
+      auth        required      pam_faillock.so authfail audit even_deny_root deny=5 unlock_time=600
+      auth        required      pam_deny.so
+
+      account     required      pam_faillock.so
+      account     required      pam_unix.so
+      account     sufficient    pam_localuser.so
+      account     sufficient    pam_succeed_if.so uid < 1000 quiet
+      account     [default=bad success=ok user_unknown=ignore] pam_sss.so
+      account     required      pam_permit.so
+
+      password    requisite     pam_pwquality.so try_first_pass retry=3 authtok_type=
+      password    requisite     pam_pwhistory.so remember=5 use_authtok
+      password    sufficient    pam_unix.so sha512 shadow nullok try_first_pass use_authtok rounds=640000
+      password    sufficient    pam_sss.so use_authtok
+      password    required      pam_deny.so
+
+      session     optional      pam_keyinit.so revoke
+      session     required      pam_limits.so
+      -session    optional      pam_systemd.so
+      session     optional      pam_mkhomedir.so skel=/etc/skel umask={{ sssd_umask }}
+      session     [success=1 default=ignore] pam_succeed_if.so service in crond quiet use_uid
+      session     required      pam_unix.so
+      session     optional      pam_sss.so
+  with_items:
+    - "/etc/pam.d/system-auth"
+    - "/etc/pam.d/password-auth"
+  when: not sssd_pam_devsec_config|bool
+
+- name: "REDHAT-7 | Enable and start oddjobd"
+  ansible.builtin.service:
+    name: oddjobd
+    enabled: true
+    state: started

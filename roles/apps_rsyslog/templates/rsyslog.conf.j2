@@ -1,0 +1,16 @@
+{{ ansible_managed | comment }}
+
+#################
+#### MODULES ####
+#################
+{{ rsyslog_modules_conf }}
+
+###########################
+#### GLOBAL DIRECTIVES ####
+###########################
+{{ rsyslog_global_conf }}
+
+###############
+#### RULES ####
+###############
+{{ rsyslog_rules_conf }}

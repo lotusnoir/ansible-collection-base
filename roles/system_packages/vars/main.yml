@@ -1,0 +1,10 @@
+---
+packages_family: "{{ lookup('vars', 'packages_family_' + ansible_facts.os_family | lower, default=[]) }}"
+packages_distrib: "{{ lookup('vars', 'packages_distrib_' + ansible_facts.distribution | lower, default=[]) }}"
+packages_distrib_version: >-
+  {{ vars['packages_distrib_' ~ (ansible_facts.distribution | lower) ~ '_' ~ ansible_facts.distribution_major_version] | default([]) }}
+
+packages_rm_family: "{{ lookup('vars', 'packages_rm_family_' + ansible_facts.os_family | lower, default=[]) }}"
+packages_rm_distrib: "{{ lookup('vars', 'packages_rm_distrib_' + ansible_facts.distribution | lower, default=[]) }}"
+packages_rm_distrib_version: >-
+  {{ vars['packages_rm_distrib_' ~ (ansible_facts.distribution | lower) ~ '_' ~ ansible_facts.distribution_major_version] | default([]) }}

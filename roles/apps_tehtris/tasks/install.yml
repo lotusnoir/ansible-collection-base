@@ -1,0 +1,85 @@
+---
+- name: "Check for tehtris installation"
+  ansible.builtin.stat:
+    path: '{{ tehtris_config_path }}/config.ini'
+  changed_when: false
+  register: tehtris_install
+
+- name: "Installation"
+  when: not tehtris_install.stat.exists or tehtris_force_install|bool
+  block:
+    - name: "Create tehtris group"
+      ansible.builtin.group:
+        name: "{{ tehtris_group }}"
+        system: true
+      when: tehtris_user != "root"
+
+    - name: "Create tehtris user"
+      ansible.builtin.user:
+        name: "{{ tehtris_user }}"
+        group: "{{ tehtris_group }}"
+        home: "{{ tehtris_install_dir }}"
+        create_home: true
+      when: tehtris_user != "root"
+
+    - name: "Copy tehtris binary"
+      ansible.builtin.copy:
+        src: "{{ tehtris_binary_file }}"
+        dest: "{{ tehtris_tmp_path }}"
+        owner: "{{ tehtris_user }}"
+        group: "{{ tehtris_group }}"
+        mode: '0755'
+      when:
+        - tehtris_install_method == "file"
+        - tehtris_install_path is defined
+        - tehtris_install_path | length > 0
+
+    - name: "Download package from url"
+      ansible.builtin.get_url:
+        url: '{{ tehtris_install_url }}'
+        dest: "{{ tehtris_tmp_path }}"
+        timeout: '60'
+        mode: '0755'
+      when:
+        - tehtris_install_method == "url"
+        - tehtris_install_url is defined
+        - tehtris_install_url | length > 0
+
+    - name: "Check for tehtris install package"
+      ansible.builtin.stat:
+        path: '{{ tehtris_tmp_path }}/{{ tehtris_binary_file }}'
+      changed_when: false
+      register: tehtris_pkg
+
+    - name: "Install tehtris"
+      ansible.builtin.command: "/bin/bash {{ tehtris_tmp_path }}/{{ tehtris_binary_file }} {{ tehtris_installer_options }}"
+      changed_when: false
+      when: tehtris_pkg.stat.exists
+
+    - name: "Remove binary file"
+      ansible.builtin.file:
+        path: "{{ tehtris_tmp_path }}/{{ tehtris_binary_file }}"
+        state: absent
+
+- name: "Config tasks"
+  when:
+    - tehtris_install_path is defined or tehtris_install_url is defined
+    - tehtris_install_path | length > 0 or tehtris_install_url | length > 0
+  block:
+    - name: "Configuring config.ini"
+      ansible.builtin.template:
+        src: config.ini.j2
+        dest: "{{ tehtris_config_path }}/config.ini"
+        owner: "{{ tehtris_user }}"
+        group: "{{ tehtris_group }}"
+        mode: '0644'
+      become: true
+      notify:
+        - Reload tehtris
+
+    - name: "Enable and Start tehtris service"
+      ansible.builtin.service:
+        name: "{{ tehtris_service_name }}"
+        state: started
+        enabled: true
+        daemon_reload: true

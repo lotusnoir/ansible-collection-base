@@ -1,0 +1,4 @@
+---
+salt_minion_repo_version: "{{ ansible_distribution_version }}"
+salt_minion_repo_key: "SALT-PROJECT-GPG-PUBKEY-2023.gpg"
+salt_minion_repo_dist: "{{ ansible_distribution_release }}"

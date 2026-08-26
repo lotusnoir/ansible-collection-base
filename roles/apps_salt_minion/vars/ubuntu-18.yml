@@ -1,0 +1,6 @@
+---
+salt_minion_repo_version: "{{ ansible_distribution_version }}"
+salt_minion_repo_key: "latest/salt-archive-keyring.gpg"
+salt_minion_repo_dist: "{{ ansible_distribution_release }}"
+salt_minion_owner: "root"
+salt_minion_group: "root"

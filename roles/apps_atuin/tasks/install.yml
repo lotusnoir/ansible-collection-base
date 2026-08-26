@@ -1,0 +1,53 @@
+---
+- name: "Check if atuin is present"
+  ansible.builtin.stat:
+    path: "{{ atuin_client_bin_dir }}/atuin"
+  register: atuin_stat
+
+- name: "Get current version"
+  when: atuin_stat.stat.exists
+  block:
+    - name: "Get current version"
+      ansible.builtin.command:
+        argv:
+          - "{{ atuin_client_bin_dir }}/atuin"
+          - --version
+      register: version_output
+      changed_when: false
+      check_mode: false
+
+    - name: "Store detected version for later"
+      ansible.builtin.set_fact:
+        detected_version: "{{ version_output.stdout | split | last }}"
+
+- name: Download and install new binary, if needed, for new atuin
+  when: not atuin_stat.stat.exists or (atuin_client_version != detected_version)
+  block:
+    - name: "Extract sources"
+      ansible.builtin.unarchive:
+        src: https://github.com/atuinsh/atuin/releases/download/v{{ atuin_client_version }}/{{ atuin_client_artifact }}
+        remote_src: true
+        dest: "/tmp"
+        include: "atuin-{{ ansible_architecture }}-unknown-linux-{{ atuin_client_libc_variant }}/atuin"
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: "Copy binary"
+      ansible.builtin.copy:
+        src: /tmp/atuin-{{ ansible_architecture }}-unknown-linux-{{ atuin_client_libc_variant }}/atuin
+        dest: "{{ atuin_client_bin_dir }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: "Clean"
+      ansible.builtin.file:
+        path: /tmp/atuin-{{ ansible_architecture }}-unknown-linux-{{ atuin_client_libc_variant }}
+        state: absent
+
+- name: "Configure users"
+  ansible.builtin.include_tasks: users.yml
+  loop: "{{ atuin_client_users }}"
+  when: atuin_client_users is defined

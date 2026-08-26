@@ -1,0 +1,44 @@
+---
+galaxy_info:
+  author: lotusnoir
+  role_name: apps_tehtris
+  description: "Install and configure tehtris EDR"
+  license: "Apache License, Version 2.0"
+  min_ansible_version: "2.8"
+
+  platforms:
+    - name: "Ubuntu"
+      versions:
+        - "focal"
+        - "jammy"
+        - "noble"
+        - "resolute"
+    - name: "Debian"
+      versions:
+        - "buster"
+        - "bullseye"
+        - "bookworm"
+        - "trixie"
+    - name: "Rocky"
+      versions:
+        - "8"
+        - "9"
+        - "10"
+    - name: "OracleLinux"
+      versions:
+        - "8"
+        - "9"
+        - "10"
+    - name: "RedHat"
+      versions:
+        - "8"
+        - "9"
+        - "10"
+
+  galaxy_tags:
+    - tehtris
+    - secu
+    - edr
+    - scan
+
+dependencies: []

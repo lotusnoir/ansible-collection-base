@@ -1,0 +1,39 @@
+---
+- name: "Check if nssm already installed"
+  ansible.windows.win_stat:
+    path: C:\Windows\System32\nssm.exe
+  register: nssm_info
+
+- name: "Download and unarchive NSSM"
+  when: not nssm_info.stat.exists
+  block:
+    - name: "Create temporary directory to download NSSM"
+      ansible.windows.win_tempfile:
+        state: directory
+        prefix: ansible-nssm
+      register: nssm_temp_dir
+
+    - name: "Download NSSM"
+      ansible.windows.win_get_url:
+        url: "{{ nssm_zip_url }}"
+        dest: "{{ nssm_temp_dir.path }}"
+      register: __pkg_result
+      retries: 12
+      delay: 10
+      until: __pkg_result is success
+
+    - name: "Unarchive NSSM"
+      community.windows.win_unzip:
+        src: "{{ nssm_temp_dir.path }}\\{{ nssm_pkg_name }}"
+        dest: "{{ nssm_temp_dir.path }}"
+
+    - name: "Copy file to windows system32 directory"
+      ansible.windows.win_copy:
+        src: "{{ nssm_temp_dir.path }}\\nssm-{{ nssm_version }}\\win64\\nssm.exe"
+        dest: C:\Windows\System32\
+        remote_src: true
+  always:
+    - name: "Cleanup"
+      ansible.windows.win_file:
+        path: "{{ nssm_temp_dir.path }}"
+        state: absent

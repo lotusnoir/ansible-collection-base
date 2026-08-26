@@ -1,0 +1,68 @@
+---
+### Proxy settings
+windows_tuning_set_proxy: false
+windows_tuning_proxy: "{{ http_proxy }}"
+
+### system settings
+windows_tuning_customize: false
+windows_tuning_admin_username: "Administrateur"
+
+windows_tuning_disable_services: false
+windows_tuning_common_svc:
+  - SharedAccess
+  - lltdsvc
+  - ScDeviceEnum
+  - wisvc
+windows_tuning_server_svc:
+  - AxInstSV
+  - bthserv
+  - CDPUserSvc
+  - PimIndexMaintenanceSvc
+  - dmwappushservice
+  - MapsBroker
+  - lfsvc
+  - wlidsvc
+  # - NcbService
+  - PhoneSvc
+  - Spooler
+  - PrintNotify
+  - PcaSvc
+  - QWAVE
+  - RmSvc
+  - SensorDataService
+  - SensrSvc
+  - SensorService
+  - ShellHWDetection
+  - SSDPSRV
+  - WiaRpc
+  - TabletInputService
+  - upnphost
+  - UserDataSvc
+  - WalletService
+  - Audiosrv
+  - AudioEndpointBuilder
+  - FrameServer
+  - stisvc
+  - icssvc
+  - WpnService
+  - WpnUserService
+
+windows_tuning_disable_ipv6: false
+windows_tuning_allow_rdp: false
+windows_tuning_set_timezone: false
+windows_tuning_timezone: "Romance Standard Time"
+windows_tuning_add_ping_rule: false
+windows_tuning_add_users: []
+#  - name: app-ansible
+#    password: "xxxxxxxxxxxxx"
+#    groups:
+#      - Administrators
+#      - "Remote Desktop Users"
+#
+#  - name: monitoring
+#    password: "yyyyyyyyyyyyyyyyy"
+#    groups:
+#      - Users
+
+windows_tuning_system_upgrade: false
+windows_tuning_cleanup: false

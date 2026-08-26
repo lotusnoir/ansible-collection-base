@@ -1,0 +1,155 @@
+---
+- name: "Check for /etc/security/pwquality.conf"
+  ansible.builtin.stat:
+    path: "/etc/security/pwquality.conf"
+  register: pwquality_file
+  changed_when: false
+  when: extra_sec_pwquality_update | bool
+
+- name: "/etc/security/pwquality.conf"
+  ansible.builtin.lineinfile:
+    path: /etc/security/pwquality.conf
+    regexp: "^{{ item }}"
+    line: "{{ item }}"
+    state: present
+  with_items:
+    - "minlen = 14"
+    - "minclass = 4"
+  when:
+    - pwquality_file.stat.exists is defined
+    - extra_sec_pwquality_update | bool
+
+- name: "Create crontab.allow if not exists"
+  ansible.builtin.copy:
+    content: "{{ extra_sec_crontab_allow_content }}"
+    dest: "{{ item }}"
+    force: "no"
+    owner: root
+    group: "{{ 'crontab' if ansible_facts.os_family == 'Debian' else 'root' }}"
+    mode: "640"
+  with_items:
+    - /etc/cron.allow
+  when: extra_sec_crontab_allow | bool
+
+- name: "Create at.allow if not exists"
+  ansible.builtin.copy:
+    content: "{{ extra_sec_at_allow_content }}"
+    dest: "{{ item }}"
+    force: "no"
+    owner: root
+    group: root
+    mode: "600"
+  with_items:
+    - /etc/at.allow
+  when: extra_sec_at_allow | bool
+
+- name: "Replace issue content"
+  ansible.builtin.copy:
+    content: "{{ extra_sec_issue_content }}"
+    dest: "{{ item }}"
+    mode: "0600"
+  with_items:
+    - /etc/issue
+    - /etc/issue.net
+  when: extra_sec_issue_update | bool
+
+- name: "Change log permissions"
+  ansible.builtin.command: find /var/log -type f -exec chmod g-wx,o-rwx '{}' + -o -type d -exec chmod g-w,o-rwx '{}' +
+  changed_when: false
+  failed_when: false
+  when: extra_sec_logs_perms | bool
+
+- name: "Change umask in /etc/init.d/rc"
+  ansible.builtin.lineinfile:
+    path: /etc/init.d/rc
+    regexp: "^umask 022"
+    line: umask 027
+  when: extra_sec_umask_rc | bool
+
+- name: Désactiver les consoles TTY 2 à 6
+  ansible.builtin.systemd:
+    name: "getty@tty{{ item }}.service"
+    enabled: false
+    masked: true
+    state: stopped
+  loop: [2, 3, 4, 5, 6]
+
+###
+# Failed to determine supported controllers: No such process
+# Failed to allocate manager object: No such process
+# user@1831700500.service: Main process exited, code=exited, status=1/FAILURE
+# user@1831700500.service: Failed with result 'exit-code'.
+# Failed to start User Manager for UID 1831700500.
+#
+# - name: Configure group for reading other processes
+#   group:
+#     state: present
+#     name: proc
+#     system: yes
+#
+# - name: Ensure configuration directory for whitelisted services exist
+#   file:
+#     state: directory
+#     path: "/etc/systemd/system/{{ item }}.d"
+#     owner: root
+#     group: root
+#     mode: u=rwx,g=rx,o=rx
+#   loop:
+#     - systemd-logind.service
+#     - user@.service
+#
+# - name: Configure whitelisted services to adapt to hidepid setting
+#   copy:
+#     content: |
+#       [Service]
+#       SupplementaryGroups=proc
+#     dest: "/etc/systemd/system/{{ item }}.d/proc_hidepid_whitelist.conf"
+#     owner: root
+#     group: root
+#     mode: u=rw,g=r,o=r
+#   loop:
+#     - systemd-logind.service
+#     - user@.service
+#
+# - meta: end_play
+#
+# ###############################
+
+# - name: "change permissions on files"
+#   ansible.builtin.file:
+#     path: /etc/group-
+#     owner: root
+#     group: root
+#     mode: "u-x,go-rwx"
+#   with_items:
+#     - /etc/group-
+#     - /etc/passwd-
+#     - /etc/motd
+#
+# - name: "remove files"
+#   ansible.builtin.file:
+#     path: "{{ item }}"
+#     state: absent
+#   with_items:
+#     - /etc/cron.deny
+#     - /etc/at.deny
+#
+# ##############
+# - name: "Check for logrotate.conf"
+#   ansible.builtin.stat:
+#     path: '/etc/logrotate.conf'
+#   changed_when: false
+#   register: logrotate_file
+#
+# #############
+# - name: Ensure group "sugroup" exists
+#   ansible.builtin.group:
+#     name: sugroup
+#     state: present
+#
+# - name: Ensure access to the su command is restricted - CIS 5.7
+#   ansible.builtin.lineinfile:
+#     path: /etc/pam.d/su
+#     regexp: '^auth required pam_wheel.so use_uid group=sugroup'
+#     line: auth required pam_wheel.so use_uid group=sugroup
+#     insertafter: "^auth       sufficient pam_rootok.so"

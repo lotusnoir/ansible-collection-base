@@ -1,0 +1,9 @@
+---
+network_primary_ip: ""
+#  - interface: ens3
+#    address: 10.10.10.10
+#    netmask: 255.255.255.0
+#    gateway: 10.10.10.254
+#    mtu: "1500"
+network_addtionnal_ips: ""
+#  - {address: 10.64.36.28, netmask: 255.255.255.0}

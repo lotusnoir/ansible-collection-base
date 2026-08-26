@@ -1,0 +1,11 @@
+---
+- name: "Initialize aide database"
+  ansible.builtin.command: "{{ aide_install_dir }}/aide --init --config {{ aide_config_path }}/aide.conf"
+  changed_when: false
+  when: not __aide_db.stat.exists
+
+- name: "Move new aide database into place"
+  ansible.builtin.command: "mv aide.db.new aide.db"
+  changed_when: false
+  args:
+    chdir: "{{ aide_db_path }}"

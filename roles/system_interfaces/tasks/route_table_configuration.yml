@@ -1,0 +1,25 @@
+---
+- name: "Ensure /etc/iproute2 exists"
+  become: true
+  ansible.builtin.file:
+    path: /etc/iproute2
+    state: directory
+    mode: '0755'
+
+- name: "Ensure rt_tables exists"
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/iproute2/rt_tables
+    content: ""
+    force: false
+    mode: '0644'
+
+- name: "Ensure IP routing tables are defined"
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/iproute2/rt_tables
+    marker: "# {mark} ANSIBLE MANAGED ROUTE TABLES"
+    block: |
+      {% for table in interfaces_route_tables %}
+      {{ table.id }} {{ table.name }}
+      {% endfor %}

@@ -1,0 +1,14 @@
+---
+modules_load: []
+#  - nf_conntrack
+#  - nf_defrag_ipv4
+#  - xt_conntrack
+#  - nf_conntrack_ipv4
+
+modules_blacklist: []
+#  - i2c_piix4
+
+modules_options: []
+#  nf_conntrack:
+#    options nf_conntrack hashsize=65536
+#    options nf_conntrack max=262144

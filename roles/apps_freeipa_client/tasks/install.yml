@@ -1,0 +1,91 @@
+---
+- name: "Check for freeipa_client binary"
+  ansible.builtin.stat:
+    path: "/usr/sbin/ipa-client-install"
+  changed_when: false
+  register: freeipa_install
+
+- name: "Install tasks"
+  when: not freeipa_install.stat.exists or freeipa_client_force_install|bool
+  block:
+    - name: "Include tasks for Debian 11"
+      ansible.builtin.include_tasks: setup-debian-11.yml
+      when: ansible_distribution_release == "bullseye"
+
+    - name: Install FreeIPA packages
+      ansible.builtin.package:
+        name: "{{ freeipa_client_pkgs }}"
+        state: present
+        update_cache: "{{ omit if (ansible_pkg_mgr == 'dnf') else 'yes' }}"
+      register: __pkg_result
+      retries: 12
+      delay: 10
+      until: __pkg_result is success
+      when: ansible_distribution_release != "bullseye"
+
+- name: Check for freeipa enrollement
+  ansible.builtin.stat:
+    path: "/etc/ipa/default.conf"
+  changed_when: false
+  register: freeipa_enroll
+
+- name: "When enrollement dont exist"
+  when: not freeipa_enroll.stat.exists
+  block:
+    - name: Check that all requiered ports are open to reach freeipa server
+      ansible.builtin.wait_for:
+        host: "{{ freeipa_client_server_fqdn }}"
+        port: "{{ item }}"
+        state: started
+        delay: 0
+        timeout: 2
+      failed_when: false
+      with_items:
+        - "{{ freeipa_client_ports }}"
+      when: freeipa_client_check_server_connectivity
+
+    - name: Run client install
+      ansible.builtin.command: "/usr/sbin/ipa-client-install -U {{ freeipa_client_install_options | join(' ') }}"
+      register: install
+      changed_when: false
+      when: not freeipa_client_test_mode
+
+- name: "DEBIAN: Tasks for debian11"
+  when: ansible_distribution_release == "bullseye" and not freeipa_client_test_mode
+  block:
+    - name: "BUGFIX for deb11: Ensure session are none"
+      ansible.builtin.lineinfile:
+        path: /etc/sssd/sssd.conf
+        regexp: "^session_provider ="
+        line: session_provider = none
+        insertafter: "^auth_provider ="
+
+    - name: "BUGFIX for deb11: Service line from default template shouldnt be set"
+      ansible.builtin.lineinfile:
+        path: /etc/sssd/sssd.conf
+        regexp: "^services = nss"
+        state: absent
+
+    - name: 'BUGFIX for deb11 - Error opening "/etc/apache2/nssdb/pwdfile.txt": No such file or directory'
+      ansible.builtin.file:
+        path: /etc/apache2/nssdb
+        state: directory
+        mode: "0755"
+
+    - name: 'BUGFIX for deb11 - Error opening "/etc/apache2/nssdb/pwdfile.txt": No such file or directory'
+      ansible.builtin.file:
+        src: "/etc/ipa/nssdb/pwdfile.txt"
+        dest: "/etc/apache2/nssdb/pwdfile.txt"
+        state: link
+
+- name: "Restart systemd-logind"
+  ansible.builtin.service:
+    name: systemd-logind
+    state: restarted
+  when: install.changed
+
+- name: "Restart sssd"
+  ansible.builtin.service:
+    name: sssd
+    state: restarted
+  when: install.changed

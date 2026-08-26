@@ -1,0 +1,79 @@
+---
+- name: "Check for binary"
+  ansible.builtin.stat:
+    path: "{% if fluentbit_install_method == 'src' %}{{ fluentbit_install_dir }}{{ fluentbit_bin_name }}{% else %}/opt/fluent-bit/bin/fluent-bit{% endif %}"
+  changed_when: false
+  register: __installed_bin
+
+- name: "Repo install tasks"
+  ansible.builtin.include_tasks: install_repo.yml
+  when: fluentbit_install_method == "repo"
+
+- name: "Sources install tasks"
+  ansible.builtin.include_tasks: install_build.yml
+  when: fluentbit_install_method == "build"
+
+- name: "Modify hard nofile limits for root domain"
+  community.general.pam_limits:
+    domain: root
+    limit_type: "-"
+    limit_item: nofile
+    value: "{{ fluentbit_nofile_limit }}"
+  when: fluentbit_update_pam_limits
+
+- name: "Modify hard nofile limits for wildcard domain"
+  community.general.pam_limits:
+    domain: "*"
+    limit_type: "-"
+    limit_item: nofile
+    value: "{{ fluentbit_nofile_limit }}"
+  when: fluentbit_update_pam_limits
+
+- name: "Create config file"
+  ansible.builtin.template:
+    src: fluent-bit.conf.j2
+    dest: "{{ fluentbit_config_dir }}/fluent-bit.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Stop fluent-bit
+    - Start fluent-bit
+
+- name: "Create conf.d config"
+  ansible.builtin.template:
+    src: custom.conf.j2
+    dest: "{{ fluentbit_config_dir }}/conf.d/{{ item.name }}.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  with_items: "{{ fluentbit_extra_confd }}"
+  when:
+    - fluentbit_extra_confd is defined
+    - fluentbit_extra_confd | length > 0
+  notify:
+    - Stop fluent-bit
+    - Start fluent-bit
+
+- name: "Create parser file"
+  ansible.builtin.template:
+    src: parsers.conf.j2
+    dest: "{{ fluentbit_config_dir }}/parsers.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Stop fluent-bit
+    - Start fluent-bit
+
+- name: "Start fluent-bit"
+  ansible.builtin.service:
+    name: "{{ _fluentbit_service_name }}"
+    enabled: true
+    daemon_reload: true
+    state: started
+  register: __result
+  retries: 3
+  delay: 3
+  until: __result is not failed
+  when: fluentbit_start_service

@@ -1,0 +1,18 @@
+---
+### In some cases package dbus is missing and not started
+hostname_ensure_dbus: false
+
+### Use to set name on system
+hostname_value: "{{ inventory_hostname }}"
+
+### /etc/hosts content
+hostname_hosts_file: "/etc/hosts"
+hostname_base_content: |-
+  127.0.0.1   localhost
+  {{ ansible_default_ipv4.address }}  {{ ansible_fqdn }}   {{ inventory_hostname }}
+hostname_extra_content: ""
+hostname_ipv6_default_content: true
+
+# Restart some service to apply new name
+hostname_restart_services: []
+#  - rsyslog

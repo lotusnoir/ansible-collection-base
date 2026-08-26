@@ -1,0 +1,53 @@
+{{ ansible_managed | comment }}
+
+[Unit]
+Description=Prometheus chrony exporter
+
+[Service]
+User={{ chrony_exporter_user }}
+Group={{ chrony_exporter_group }}
+ExecStart={{ chrony_exporter_install_dir }}/{{ chrony_exporter_bin_name }} \
+          --chrony.address={{ chrony_exporter_chrony_address }} \
+          --web.listen-address={{ chrony_exporter_web_listen }}:{{ chrony_exporter_web_port }} \
+          --log.level={{ chrony_exporter_loglevel }} \
+{% if chrony_exporter_collector_sources is sameas true %}          --collector.sources \
+{% else %}           --no-collector.sources \
+{% endif %}
+{% if chrony_exporter_collector_serverstats is sameas true %}          --collector.serverstats \
+{% else %}           --no-collector.serverstats \
+{% endif %}
+{% if chrony_exporter_collector_tracking is sameas true %}          --collector.tracking \
+{% else %}           --no-collector.tracking \
+{% endif %}
+{% if chrony_exporter_collector_dns_lookup is sameas true %}          --collector.dns-lookups
+{% else %}           --no-collector.dns-lookups
+{% endif %}
+
+AmbientCapabilities=
+CapabilityBoundingSet=
+DeviceAllow=/dev/null rw
+DevicePolicy=strict
+LockPersonality=true
+MemoryDenyWriteExecute=true
+NoNewPrivileges=true
+PrivateDevices=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+RemoveIPC=true
+RestrictNamespaces=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+
+ExecReload=/bin/kill -HUP $MAINPID
+SyslogIdentifier=chrony_exporter
+RestartSec=1
+
+#PrivateTmp=yes
+#ReadWritePaths=/run/chrony
+#BindPaths=/run/chrony
+
+[Install]
+WantedBy=multi-user.target

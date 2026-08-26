@@ -1,0 +1,13 @@
+---
+sssd_pkg:
+  - sssd
+  - sssd-ldap
+  - sssd-tools
+  - sssd-dbus
+  - ldb-tools
+  - libpam-sss
+  - libnss-sss
+  - libsss-sudo
+  - libpam-umask
+
+sssd_nsswitch_path: /etc/nsswitch.conf

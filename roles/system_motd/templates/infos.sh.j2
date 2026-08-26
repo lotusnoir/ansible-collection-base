@@ -1,0 +1,201 @@
+#!/bin/bash
+
+################################
+# colors
+################################
+GREEN="\e[32m"
+YELLOW="\e[33m"
+RED="\e[31m"
+CYAN="\e[36m"
+WHITE="\e[39m"
+BOLD_GRAY="\e[1m"
+MARGIN_COLOR="\e[38;5;34m"
+MARGIN_WARNING_COLOR="\e[38;5;202m"
+MARGIN_ALERT_COLOR="\e[38;5;160m"
+COLOR_RESET="\e[0m"
+
+function success () { echo -e "${GREEN}${*}${COLOR_RESET}";}
+function warning () { echo -e "${YELLOW}${*}${COLOR_RESET}";}
+function alert () { echo -e "${RED}${*}${COLOR_RESET}";}
+function comment () { echo -e "${CYAN}${*}${COLOR_RESET}"; }
+function info () { echo -e "${WHITE}${*}${COLOR_RESET}";}
+
+################################
+# Functions
+################################
+# system uptime
+# Retrurn warning if uptime < 0 days
+colorize_uptime () {
+  uptime=$(cut -f1 -d. /proc/uptime)
+  upDays=$((uptime/60/60/24))
+  upHours=$((uptime/60/60%24))
+  upMins=$((uptime/60%60))
+  upSecs=$((uptime%60))
+  UPTIME_FORMATTED="$upDays days, $upHours hours, $upMins minutes, $upSecs seconds"
+  if [[ "$UPTIME_FORMATTED" =~ ^[0]\ days ]]; then
+    warning "${UPTIME_FORMATTED}"
+    return 1
+  else
+    info "${UPTIME_FORMATTED}"
+  fi
+}
+
+colorize_memory () {
+    MEMORY=$(free | grep Mem | awk '{printf "%2d", 100-(($6+$4+$5)/$2) * 100.0}')
+    if [ "$MEMORY" -gt 90 ]; then
+        alert "${MEMORY}%"
+        return 100
+    elif [ "$MEMORY" -gt 80 ] && [ "$MEMORY" -le 90 ] ; then
+        warning "${MEMORY}%"
+        return 1
+    elif [ "$MEMORY" -le 80 ]; then
+        success "${MEMORY}%"
+    fi
+}
+
+colorize_swap () {
+    SWAP=$(free | grep Swap | awk '{printf "%2d", ($3+$6)/$2 * 100.0}')
+    if [ "$SWAP" -gt 80 ]; then
+        alert "${SWAP}%"
+        return 100
+    elif [ "$SWAP" -gt 50 ] && [ "$SWAP" -le 80 ] ; then
+        warning "${SWAP}%"
+        return 1
+    elif [ "$SWAP" -le 50 ]; then
+        success "${SWAP}%"
+    fi
+}
+
+colorize_load () {
+  # system load (1/5/15 minutes)
+  LOAD1=$(awk '{print $1}' /proc/loadavg)
+  LOAD5=$(awk '{print $2}' /proc/loadavg)
+  LOAD15=$(awk '{print $3}' /proc/loadavg)
+
+  #if load less than core = green
+  #if load between core and core x2 = yellow
+  #if load more than core x2 = red
+  status=0
+
+  # --- LOAD1 ---
+  if [ "$(echo "${LOAD1} < ${SYS_CORE}" | bc)" -eq 1 ]; then
+      success "${LOAD1} \c"
+  elif [ "$(echo "${LOAD1} > ${SYS_CORE}" | bc)" -eq 1 ] && [ "$(echo "${LOAD1} < ${SYS_CORE_X2}" | bc)" -eq 1 ]; then
+      warning "${LOAD1} \c"
+      [ $status -lt 1 ] && status=1
+  elif [ "$(echo "${LOAD1} > ${SYS_CORE_X2}" | bc)" -eq 1 ]; then
+      alert "${LOAD1} \c"
+      status=100
+  fi
+
+  # --- LOAD5 ---
+  if [ "$(echo "${LOAD5} < ${SYS_CORE}" | bc)" -eq 1 ]; then
+      success "${LOAD5} \c"
+  elif [ "$(echo "${LOAD5} > ${SYS_CORE}" | bc)" -eq 1 ] && [ "$(echo "${LOAD5} < ${SYS_CORE_X2}" | bc)" -eq 1 ]; then
+      warning "${LOAD5} \c"
+      [ $status -lt 1 ] && status=1
+  elif [ "$(echo "${LOAD5} > ${SYS_CORE_X2}" | bc)" -eq 1 ]; then
+      alert "${LOAD5} \c"
+      status=100
+  fi
+
+  # --- LOAD15 ---
+  if [ "$(echo "${LOAD15} < ${SYS_CORE}" | bc)" -eq 1 ]; then
+      success "${LOAD15}"
+  elif [ "$(echo "${LOAD15} > ${SYS_CORE}" | bc)" -eq 1 ] && [ "$(echo "${LOAD15} < ${SYS_CORE_X2}" | bc)" -eq 1 ]; then
+      warning "${LOAD15}"
+      [ $status -lt 1 ] && status=1
+  elif [ "$(echo "${LOAD15} > ${SYS_CORE_X2}" | bc)" -eq 1 ]; then
+      alert "${LOAD15}"
+      status=100
+  fi
+
+  return $status
+}
+
+################################
+# SYSTEM VARS
+################################
+# USER=`whoami`
+# CURRENT_USERS="Currently `users | wc -w` user(s) logged on"
+
+HOSTNAME=$(uname -n)
+SYS_CORE=$(awk -F: '/model name/ {core++} END {print core}' /proc/cpuinfo)
+SYS_CORE_X2=$(echo "$SYS_CORE" 2 | awk '{printf "%0.0f\n",$1*$2}')
+SYS_MEMORY=$(grep MemTotal /proc/meminfo | awk '{print $2}' | xargs -I {} echo "scale=0; {}/1024^2+1" | bc)
+HARDWARE="cpu: $SYS_CORE / memory: $SYS_MEMORY"
+IP=$(/sbin/ip -4 -o addr show scope global | awk '{gsub(/\/.*/,"",$4); print $4}' | grep -v "172." | sed ':a;N;$!ba;s/\n/ - /g')
+RELEASE="{{ ansible_facts.distribution }} {{ ansible_distribution_version }} {{ ansible_distribution_release }}"
+
+# get swap file details
+#SWAP=`free -mh | grep "Swap" | awk '{print "used:",$4,"/",$2,"( free: ",$3,")"}' | sed 's/i//g'`
+
+# disk usage
+DISK_USAGE=$(df -Ph | grep mapper | awk '/\// {print $6,"used:",$5,"free:",$4}' | sed ':a;N;$!ba;s/\n/ - /g')
+
+
+# get processes
+PSA=$(ps -Afl | wc -l)
+
+###################################
+PRIMARY_DISK_CODE=0
+{% if motd_check_boot_device is sameas true %}
+PRIMARY_DEVICE={{ motd_boot_device }}
+PRIMARY_DISK=$(df | awk '$NF == "/" || $NF == "/boot" { print $1}' | grep "$PRIMARY_DEVICE" | wc -l)
+if [ "$PRIMARY_DISK" -eq 0 ]; then
+    alert "Wrong disk on boot, please reboot your system to fix"
+    PRIMARY_DISK_CODE=100
+fi
+{% endif %}
+
+
+
+###################################
+# Ansible Roles
+ANSIBLE_CODE=0
+
+{% if motd_print_ansible_groups is sameas true %}
+ANSIBLE_GROUPS={{ group_names | join(',') }}
+if [ "$ANSIBLE_GROUPS" == "ungrouped" ]; then
+    alert "This VM is not part of any Ansible group."
+    ANSIBLE_CODE=100
+fi
+{% endif %}
+
+
+###################################
+# Print
+
+MSG_UPTIME=$(colorize_uptime)
+UPTIME_CODE=$?
+MSG_LOAD=$(colorize_load)
+LOAD_CODE=$?
+MSG_MEMORY=$(colorize_memory)
+MEMORY_CODE=$?
+MSG_SWAP=$(colorize_swap)
+SWAP_CODE=$?
+
+STATE=0
+STATE=$((UPTIME_CODE + LOAD_CODE + MEMORY_CODE + SWAP_CODE + PRIMARY_DISK_CODE + ANSIBLE_CODE))
+
+if [ "$STATE" -ge 100 ]; then MARGIN_COLOR=$MARGIN_ALERT_COLOR;
+elif [ "$STATE" -ge 1 ] ; then MARGIN_COLOR=$MARGIN_WARNING_COLOR;
+else MARGIN_COLOR=$MARGIN_COLOR;
+fi
+
+echo -en " ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Hostname${COLOR_RESET}.............: $(info "$HOSTNAME")
+ ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Hardware${COLOR_RESET}.............: $(info "$HARDWARE")
+ ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} IP Address${COLOR_RESET}...........: $(info "$IP")
+ ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Release${COLOR_RESET}..............: $(info "$RELEASE")
+ ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} System uptime${COLOR_RESET}........: $(echo "$MSG_UPTIME")
+ ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Load${COLOR_RESET}.................: $(echo "$MSG_LOAD") (1-5-15 min)
+ ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Memory usage${COLOR_RESET}.........: $(echo "$MSG_MEMORY")
+ ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Swap usage${COLOR_RESET}...........: $(echo "$MSG_SWAP")
+ ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Disk usage${COLOR_RESET}...........: $(info "${DISK_USAGE}")
+{% if motd_print_processes is sameas true %}
+ ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Processes${COLOR_RESET}............: $(info "${PSA}" running)
+{% endif %}
+{% if motd_print_ansible_groups is sameas true %}
+ ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Ansible Groups${COLOR_RESET}.......: $(info "${ANSIBLE_GROUPS}")
+{% endif %}
+"

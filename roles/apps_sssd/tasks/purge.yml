@@ -1,0 +1,34 @@
+---
+- name: Stop sssd service
+  ansible.builtin.systemd:
+    name: sssd
+    state: stopped
+    enabled: false
+  failed_when: false
+
+- name: Purge SSSD packages on Debian/Ubuntu
+  ansible.builtin.apt:
+    name: "sssd*"
+    state: absent
+    purge: "yes"
+    autoremove: "yes"
+    update_cache: "yes"
+  when: ansible_facts.os_family == "Debian"
+
+- name: Remove SSSD packages on RedHat family
+  ansible.builtin.dnf:
+    name: "sssd*"
+    state: absent
+    autoremove: "yes"
+  when: ansible_facts.os_family == "RedHat"
+
+- name: Remove SSSD data directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /var/lib/sss
+    - /etc/sssd
+    - /var/log/sssd
+    - /etc/systemd/system/sssd.service.d
+    - /etc/systemd/system/sssd.service

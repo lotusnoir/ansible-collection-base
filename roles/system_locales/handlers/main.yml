@@ -1,0 +1,9 @@
+---
+- name: Update locales
+  ansible.builtin.command: >
+    dpkg-reconfigure --frontend noninteractive locales
+  changed_when: false
+
+- name: Reconfigure keyboard
+  ansible.builtin.command: setupcon --save-only --force
+  changed_when: false

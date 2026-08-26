@@ -1,0 +1,71 @@
+---
+- name: "DEBIAN | Configuring nsswitch"
+  ansible.builtin.template:
+    src: nsswitch.conf.j2
+    dest: "/etc/nsswitch.conf"
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  become: true
+  when:
+    - sssd_nssswitch_config is defined
+    - sssd_nssswitch_config | length > 0
+  notify: Restart sssd
+
+- name: "DEBIAN | Create homedir automatically"
+  ansible.builtin.lineinfile:
+    path: "/etc/pam.d/common-session"
+    regexp: "^session required(.*)pam_mkhomedir.so(.*)$"
+    line: "session required        pam_mkhomedir.so skel=/etc/skel/ umask={{ sssd_umask }}"
+    insertbefore: "^session(.*)default"
+    state: present
+  when:
+    - sssd_create_homedir is defined
+    - sssd_create_homedir|bool
+  notify: Restart sssd
+
+- name: "DEBIAN | Change default umask"
+  ansible.builtin.lineinfile:
+    path: "/etc/pam.d/common-session"
+    regexp: "^session    optional     pam_umask.so umask=077"
+    insertbefore: "^session optional            pam_sss.so"
+    line: "session    optional     pam_umask.so umask={{ sssd_umask }}"
+    state: present
+  when:
+    - sssd_change_umask is defined
+    - sssd_change_umask | bool
+  notify: Restart sssd
+
+- name: Creates disable directory for apparmor
+  ansible.builtin.file:
+    path: /etc/apparmor.d/disable
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when:
+    - sssd_unset_apparmor is defined
+    - sssd_unset_apparmor | bool
+
+- name: Add sssd in disable folder
+  ansible.builtin.file:
+    src: /etc/apparmor.d/usr.sbin.sssd
+    dest: /etc/apparmor.d/disable/usr.sbin.sssd
+    owner: root
+    group: root
+    state: link
+    force: true
+  when:
+    - sssd_unset_apparmor is defined
+    - sssd_unset_apparmor | bool
+
+- name: Remove rule from apparmor
+  ansible.builtin.shell: apparmor_parser -R /etc/apparmor.d/usr.sbin.sssd
+  changed_when: false
+  failed_when: false
+  args:
+    executable: /bin/bash
+  when:
+    - sssd_unset_apparmor is defined
+    - sssd_unset_apparmor | bool

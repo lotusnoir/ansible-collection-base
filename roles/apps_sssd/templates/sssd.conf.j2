@@ -1,0 +1,46 @@
+{{ ansible_managed | comment }}
+
+{% for domain in sssd_conf_domains %}
+[domain/{{ domain.name }}]
+{{ domain.content }}
+{% endfor %}
+
+{% if sssd_conf_sssd is defined and sssd_conf_sssd | length > 0 %}
+[sssd]
+{{ sssd_conf_sssd }}
+{% endif %}
+
+{% if sssd_conf_pam is defined and sssd_conf_pam | length > 0 %}
+[pam]
+{{ sssd_conf_pam }}
+{% endif %}
+
+{% if sssd_conf_nss is defined and sssd_conf_nss | length > 0 %}
+[nss]
+{{ sssd_conf_nss }}
+{% endif %}
+
+{% if sssd_conf_ifp is defined and sssd_conf_ifp | length > 0 %}
+[ifp]
+{{ sssd_conf_ifp }}
+{% endif %}
+
+{% if sssd_conf_autofs is defined and sssd_conf_autofs | length > 0 %}
+[autofs]
+{{ sssd_conf_autofs }}
+{% endif %}
+
+{% if sssd_conf_sudo is defined and sssd_conf_sudo | length > 0 %}
+[sudo]
+{{ sssd_conf_sudo }}
+{% endif %}
+
+{% if sssd_conf_pac is defined and sssd_conf_pac | length > 0 %}
+[pac]
+{{ sssd_conf_pac }}
+{% endif %}
+
+{% if sssd_conf_session_recording is defined and sssd_conf_session_recording | length > 0 %}
+[session_recording]
+{{ sssd_conf_session_recording }}
+{% endif %}

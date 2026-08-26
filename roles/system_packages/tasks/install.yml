@@ -1,0 +1,8 @@
+---
+- name: Debian tasks
+  ansible.builtin.import_tasks: setup-debian.yml
+  when: ansible_facts.os_family == 'Debian'
+
+- name: Redhat tasks
+  ansible.builtin.import_tasks: setup-redhat.yml
+  when: ansible_facts.os_family in ["RedHat", "Rocky", "OracleLinux"]

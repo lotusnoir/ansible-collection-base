@@ -1,0 +1,8 @@
+---
+- name: Restart sshd service
+  ansible.windows.win_service:
+    name: sshd
+    state: restarted
+
+- name: Install the sshd and ssh-agent service
+  ansible.windows.win_command: powershell.exe -ExecutionPolicy ByPass -File "{{ openssh_windows_install_path }}\install-sshd.ps1"

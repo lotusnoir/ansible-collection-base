@@ -1,0 +1,117 @@
+---
+- name: Print all role vars
+  ansible.builtin.debug:
+    msg:
+      - "server_uri: {{ ldap_entries_server_uri }}"
+      - "bind_dn: {{ ldap_entries_bind_dn }}"
+      - "bind_pw: {{ ldap_entries_bind_pw }}"
+      - "start_tls: {{ ldap_entries_start_tls }}"
+      - "validate_certs: {{ ldap_entries_validate_certs }}"
+      - "dn: cn={{ ldap_entries_vm_name }},{{ ldap_entries_dn_suffix }}"
+  delegate_to: "{{ ldap_entries_executor }}"
+  when: debug_exec|bool
+
+- name: VM node
+  community.general.ldap_entry:
+    server_uri: "{{ ldap_entries_server_uri }}"
+    bind_dn: "{{ ldap_entries_bind_dn }}"
+    bind_pw: "{{ ldap_entries_bind_pw }}"
+    start_tls: "{{ ldap_entries_start_tls }}"
+    validate_certs: "{{ ldap_entries_validate_certs }}"
+    dn: "cn={{ ldap_entries_vm_name }},{{ ldap_entries_dn_suffix }}"
+    objectClass: groupOfNames
+    attributes:
+      member:
+        - "{{ ldap_entries_fw }}"
+  delegate_to: "{{ ldap_entries_executor }}"
+  when: not ldap_entries_delete|bool
+
+- name: VM node attributs
+  community.general.ldap_attrs:
+    server_uri: "{{ ldap_entries_server_uri }}"
+    bind_dn: "{{ ldap_entries_bind_dn }}"
+    bind_pw: "{{ ldap_entries_bind_pw }}"
+    start_tls: "{{ ldap_entries_start_tls }}"
+    validate_certs: "{{ ldap_entries_validate_certs }}"
+    dn: "cn={{ ldap_entries_vm_name }},{{ ldap_entries_dn_suffix }}"
+    attributes:
+      member:
+        - "{{ item.key }}"
+  loop: "{{ ldap_entries_users | dict2items }}"
+  delegate_to: "{{ ldap_entries_executor }}"
+  when: not ldap_entries_delete|bool
+
+- name: Sudo node
+  community.general.ldap_entry:
+    server_uri: "{{ ldap_entries_server_uri }}"
+    bind_dn: "{{ ldap_entries_bind_dn }}"
+    bind_pw: "{{ ldap_entries_bind_pw }}"
+    start_tls: "{{ ldap_entries_start_tls }}"
+    validate_certs: "{{ ldap_entries_validate_certs }}"
+    dn: "ou=sudo,cn={{ ldap_entries_vm_name }},{{ ldap_entries_dn_suffix }}"
+    objectClass: organizationalUnit
+  delegate_to: "{{ ldap_entries_executor }}"
+  when: not ldap_entries_delete|bool
+
+- name: Firewall sudo node
+  community.general.ldap_entry:
+    server_uri: "{{ ldap_entries_server_uri }}"
+    bind_dn: "{{ ldap_entries_bind_dn }}"
+    bind_pw: "{{ ldap_entries_bind_pw }}"
+    start_tls: "{{ ldap_entries_start_tls }}"
+    validate_certs: "{{ ldap_entries_validate_certs }}"
+    dn: "cn=firewall,ou=sudo,cn={{ ldap_entries_vm_name }},{{ ldap_entries_dn_suffix }}"
+    objectClass: sudoRole
+    attributes:
+      sudocommand: FIREWALL
+      sudohost: ALL
+      sudouser: firewall
+  delegate_to: "{{ ldap_entries_executor }}"
+  when: not ldap_entries_delete|bool
+
+- name: User sudo node
+  community.general.ldap_entry:
+    server_uri: "{{ ldap_entries_server_uri }}"
+    bind_dn: "{{ ldap_entries_bind_dn }}"
+    bind_pw: "{{ ldap_entries_bind_pw }}"
+    start_tls: "{{ ldap_entries_start_tls }}"
+    validate_certs: "{{ ldap_entries_validate_certs }}"
+    dn: "{{ item.key.split(',')[0] }},ou=sudo,cn={{ ldap_entries_vm_name }},{{ ldap_entries_dn_suffix }}"
+    objectClass: sudoRole
+    attributes:
+      sudocommand: ALL
+      sudohost: ALL
+      sudouser: "{{ item.value }}"
+  loop: "{{ ldap_entries_users | dict2items }}"
+  delegate_to: "{{ ldap_entries_executor }}"
+  when: not ldap_entries_delete|bool
+
+# - name: delete user sudo node
+#   community.general.ldap_entry:
+#     server_uri: "{{ ldap_entries_server_uri }}"
+#     bind_dn: "{{ ldap_entries_bind_dn }}"
+#     bind_pw: "{{ ldap_entries_bind_pw }}"
+#     start_tls: "{{ ldap_entries_start_tls }}"
+#     validate_certs: "{{ ldap_entries_validate_certs }}"
+#     dn: "{{ item.key.split(',')[0] }},ou=sudo,cn={{ ldap_entries_vm_name }},{{ ldap_entries_dn_suffix }}"
+#     state: absent
+#   loop: "{{ ldap_entries_users | dict2items }}"
+#   delegate_to: "{{ ldap_entries_executor }}"
+#   when: ldap_entries_delete|bool
+
+- name: Delete vm node
+  community.general.ldap_entry:
+    server_uri: "{{ ldap_entries_server_uri }}"
+    bind_dn: "{{ ldap_entries_bind_dn }}"
+    bind_pw: "{{ ldap_entries_bind_pw }}"
+    start_tls: "{{ ldap_entries_start_tls }}"
+    validate_certs: "{{ ldap_entries_validate_certs }}"
+    dn: "{{ item }}"
+    recursive: true
+    state: absent
+  delegate_to: "{{ ldap_entries_executor }}"
+  with_items:
+    - "cn=firewall,ou=sudo,cn={{ ldap_entries_vm_name }},{{ ldap_entries_dn_suffix }}"
+    - "ou=sudo,cn={{ ldap_entries_vm_name }},{{ ldap_entries_dn_suffix }}"
+    - "cn={{ ldap_entries_vm_name }},{{ ldap_entries_dn_suffix }}"
+  when: ldap_entries_delete|bool

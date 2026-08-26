@@ -1,0 +1,7 @@
+---
+sssd_pkg:
+  - sssd
+  - sssd-ldap
+  - sssd-tools
+  - sssd-dbus
+  - ldb-tools

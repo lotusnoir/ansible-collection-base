@@ -1,0 +1,45 @@
+---
+- name: "Ensure logrotate is installed"
+  ansible.builtin.package:
+    name: logrotate
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "Change default config"
+  ansible.builtin.template:
+    src: logrotate.conf.j2
+    dest: "/etc/logrotate.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  when:
+    - logrotate_default_conf is defined
+    - logrotate_default_conf | length > 0
+
+- name: "Setup logrotate.d files"
+  ansible.builtin.template:
+    src: logrotate.d.j2
+    dest: "{{ logrotate_conf_path }}{{ item.name }}"
+    owner: root
+    group: root
+    mode: "0640"
+  with_items: "{{ logrotate_apps_conf }}"
+  when:
+    - logrotate_apps_conf is defined
+    - logrotate_apps_conf | length > 0
+
+- name: Ensure /var/log has correct permissions and ownership
+  ansible.builtin.file:
+    path: /var/log
+    owner: root
+    group: root
+    mode: "0755"
+    state: directory
+
+- name: "Execute logrotate"
+  ansible.builtin.command: logrotate -vf /etc/logrotate.conf
+  when: logrotate_execute
+  changed_when: false

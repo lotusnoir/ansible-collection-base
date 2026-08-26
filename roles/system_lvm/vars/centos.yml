@@ -1,0 +1,4 @@
+---
+lvm_rescanning_script: "/usr/bin/rescan-scsi-bus.sh"
+vg_name: "cl_centos"
+vg_mapper: "cl_centos"

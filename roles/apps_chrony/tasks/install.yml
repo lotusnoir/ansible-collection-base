@@ -1,0 +1,54 @@
+---
+- name: "Check for binary"
+  ansible.builtin.stat:
+    path: /usr/sbin/chronyd
+  changed_when: false
+  register: __installed_bin
+
+- name: "Install tasks"
+  when: (not __installed_bin.stat.exists) or chrony_install_force
+  block:
+    - name: "Install Chrony"
+      ansible.builtin.package:
+        name: chrony
+        state: present
+      become: true
+      register: __pkg_result
+      retries: 12
+      delay: 10
+      until: __pkg_result is success
+
+    - name: "Ensure log directories exist"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ chrony_user }}"
+        group: "{{ chrony_group }}"
+        mode: "2755"
+      become: true
+      loop:
+        - "{{ chrony_logdir }}"
+
+- name: "Configuring Chrony"
+  ansible.builtin.template:
+    src: chrony.conf.j2
+    dest: "{{ _chrony_config }}"
+    owner: "{{ chrony_user }}"
+    group: "{{ chrony_group }}"
+    mode: "0644"
+    backup: "{{ chrony_backup_files }}"
+  become: true
+  notify:
+    - "Restart chrony"
+
+- name: "Configuring Chrony default daemon opts"
+  ansible.builtin.template:
+    src: chrony.default.j2
+    dest: "/etc/default/chrony"
+    owner: "{{ chrony_user }}"
+    group: "{{ chrony_group }}"
+    mode: "0644"
+    backup: "{{ chrony_backup_files }}"
+  become: true
+  notify:
+    - "Restart chrony"

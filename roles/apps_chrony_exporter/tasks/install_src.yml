@@ -1,0 +1,115 @@
+---
+- name: "Get current version"
+  ansible.builtin.shell: |
+    set -o pipefail
+    {{ chrony_exporter_install_dir }}/{{ chrony_exporter_bin_name }} --version 2>&1 | grep -oP 'version \K[0-9.]+' | head -1
+  args:
+    executable: /bin/bash
+  changed_when: false
+  register: __installed_version
+  when: __installed_bin.stat.exists
+
+- name: "Get latest tag"
+  ansible.builtin.uri:
+    url: "{{ _chrony_exporter_release_api_url }}"
+  failed_when: false
+  register: __github_latest
+  when:
+    - chrony_exporter_version == 'latest'
+    - chrony_exporter_install_origin == "internet"
+
+- name: "Replace version fact to latest"
+  ansible.builtin.set_fact:
+    chrony_exporter_version: "{{ __github_latest.json.tag_name | default(_chrony_exporter_default_version) | replace('v', '') }}"
+  when:
+    - chrony_exporter_version == 'latest'
+    - chrony_exporter_install_origin == "internet"
+
+- name: "Install tasks"
+  when: (not __installed_bin.stat.exists) or
+      (__installed_version is defined and chrony_exporter_version not in __installed_version.stdout) or
+      chrony_exporter_install_force
+  block:
+    - name: "Create user"
+      ansible.builtin.include_tasks: create_user.yml
+      when: chrony_exporter_user != "root"
+
+    - name: "Create dirs"
+      ansible.builtin.file:
+        path: "{{ item | safe | trim }}"
+        state: directory
+        owner: "{{ chrony_exporter_user }}"
+        group: "{{ chrony_exporter_group }}"
+        mode: "0755"
+      loop:
+        - "{{ chrony_exporter_temp_dir }}/{{ role_path | basename }}"
+
+    - name: "Install requierements"
+      ansible.builtin.package:
+        name: ["ca-certificates", "unzip", "tar"]
+        state: present
+      become: true
+      register: __pkg_result
+      retries: 12
+      delay: 10
+      until: __pkg_result is success
+
+    - name: "Copy local binary"
+      ansible.builtin.copy:
+        src: "{{ chrony_exporter_local_files }}"
+        dest: "{{ chrony_exporter_temp_dir }}/{{ chrony_exporter_pkg_name }}"
+        mode: "0755"
+      when: chrony_exporter_install_origin == "local"
+
+    - name: "Download binary by host"
+      ansible.builtin.get_url:
+        url: "{{ chrony_exporter_dl_url }}"
+        dest: "{{ chrony_exporter_temp_dir }}/{{ chrony_exporter_pkg_name }}"
+        timeout: 60
+        mode: "0644"
+        force: true
+      register: __pkg_result
+      retries: 12
+      delay: 10
+      until: __pkg_result is success
+      when:
+        - chrony_exporter_install_origin == "internet"
+        - chrony_exporter_dl_executor == "host"
+
+    - name: "Download binary by localhost"
+      ansible.builtin.get_url:
+        url: "{{ chrony_exporter_dl_url }}"
+        dest: "{{ chrony_exporter_temp_dir }}/{{ chrony_exporter_pkg_name }}"
+        timeout: 60
+        mode: "0644"
+      delegate_to: localhost
+      when:
+        - chrony_exporter_install_origin == "internet"
+        - chrony_exporter_dl_executor == "localhost"
+
+    - name: "Copy local binary"
+      ansible.builtin.copy:
+        src: "{{ chrony_exporter_temp_dir }}/{{ chrony_exporter_pkg_name }}"
+        dest: "{{ chrony_exporter_temp_dir }}/{{ chrony_exporter_pkg_name }}"
+        mode: "0755"
+      when:
+        - chrony_exporter_install_origin == "internet"
+        - chrony_exporter_dl_executor == "localhost"
+
+    - name: "Unarchive"
+      ansible.builtin.unarchive:
+        src: "{{ chrony_exporter_temp_dir }}/{{ chrony_exporter_pkg_name }}"
+        dest: "{{ chrony_exporter_temp_dir }}/{{ role_path | basename }}"
+        extra_opts: [--strip-components=1]
+        remote_src: true
+        mode: "0644"
+
+    - name: "Install binary"
+      ansible.builtin.copy:
+        src: "{{ chrony_exporter_temp_dir }}/{{ role_path | basename }}/chrony_exporter"
+        dest: "{{ chrony_exporter_install_dir }}/{{ chrony_exporter_bin_name }}"
+        remote_src: true
+        owner: "{{ chrony_exporter_user }}"
+        group: "{{ chrony_exporter_group }}"
+        mode: "0755"
+      notify: Restart chrony_exporter

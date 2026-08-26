@@ -1,0 +1,38 @@
+---
+- name: "DEBIAN | Install gpg package."
+  ansible.builtin.package:
+    name: gpg
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "DEBIAN | Add fluentbit apt signing key."
+  ansible.builtin.get_url:
+    url: "{{ fluentbit_repository_key }}"
+    dest: /etc/apt/trusted.gpg.d/fluentbit.asc
+    mode: '0644'
+  register: key_result
+  retries: 12
+  delay: 10
+  until: key_result is success
+  when: fluentbit_repository_key is defined and fluentbit_repository_key|length > 0
+
+- name: "DEBIAN | Add fluentbit repo to apt list"
+  ansible.builtin.apt_repository:
+    repo: "{{ fluentbit_repository }}"
+    state: present
+    filename: "{{ fluentbit_repository_file }}"
+  when: fluentbit_repository is defined and fluentbit_repository|length > 0
+
+- name: "DEBIAN | Install fluentbit package"
+  ansible.builtin.apt:
+    name: "fluent-bit"
+    state: present
+    update_cache: true
+    cache_valid_time: 600
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success

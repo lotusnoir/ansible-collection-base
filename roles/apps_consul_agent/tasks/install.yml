@@ -1,0 +1,55 @@
+---
+- name: "Check for binary"
+  ansible.builtin.stat:
+    path: "{{ consul_agent_install_dir }}/{{ consul_agent_bin_name }}"
+  changed_when: false
+  register: __installed_bin
+
+- name: "Repo install tasks"
+  ansible.builtin.include_tasks: install_repo.yml
+  when: consul_agent_install_method == "repo"
+
+- name: "Sources install tasks"
+  ansible.builtin.include_tasks: install_src.yml
+  when: consul_agent_install_method == "src"
+
+- name: "Configuring consul"
+  ansible.builtin.template:
+    src: consul.hcl.j2
+    dest: "{{ consul_agent_config_dir }}/consul.hcl"
+    owner: "{{ consul_agent_user }}"
+    group: "{{ consul_agent_group }}"
+    mode: "0644"
+  notify: Restart consul-agent
+  when: consul_agent_config is defined and consul_agent_config | length > 0
+
+- name: "Create consul.d files"
+  ansible.builtin.template:
+    src: consul_config_d.json.j2
+    dest: "{{ consul_agent_config_dir }}/{{ item }}.json"
+    owner: "{{ consul_agent_user }}"
+    group: "{{ consul_agent_group }}"
+    mode: "0644"
+  with_items: "{{ consul_agent_config_d }}"
+  notify: Restart consul-agent
+  when: consul_agent_config_d is defined and consul_agent_config_d | length > 0
+
+- name: "Configuring systemd"
+  ansible.builtin.template:
+    src: consul.service.j2
+    dest: "/etc/systemd/system/consul.service"
+    owner: root
+    group: root
+    mode: "0644"
+  when: consul_agent_start_service
+  notify:
+    - Reload systemd
+    - Restart consul-agent
+
+- name: "Start service"
+  ansible.builtin.service:
+    daemon_reload: true
+    name: consul
+    state: started
+    enabled: true
+  when: consul_agent_start_service

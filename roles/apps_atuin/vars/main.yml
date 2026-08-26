@@ -1,0 +1,3 @@
+---
+### var
+atuin_client_artifact: atuin-{{ ansible_architecture }}-unknown-linux-{{ atuin_client_libc_variant }}.tar.gz

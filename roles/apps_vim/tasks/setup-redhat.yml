@@ -1,0 +1,27 @@
+---
+- name: "REDHAT | Configure vimrc"
+  ansible.builtin.blockinfile:
+    path: /etc/vimrc
+    marker: '" {mark} ANSIBLE MANAGED BLOCK -----+'
+    block: |
+      "
+      " Source a global configuration file if available
+      "
+      if filereadable("/etc/vim/vimrc.local")
+        source /etc/vim/vimrc.local
+      endif
+
+- name: "REDHAT | Ensure /etc/vim directory exists"
+  ansible.builtin.file:
+    path: "/etc/vim"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: "REDHAT | Install pathogen plugin"
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/tpope/vim-pathogen/master/autoload/pathogen.vim
+    dest: /usr/share/vim/vimfiles/autoload/pathogen.vim
+    mode: '0644'
+  when: vim_pathogen_install

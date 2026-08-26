@@ -1,0 +1,55 @@
+---
+- name: "Find patterns files in /var/log"
+  ansible.builtin.find:
+    paths: /var/log/
+    recurse: true
+    patterns:
+      - "*.gz"
+      - "*.xz"
+      - "*log.[0-9]"
+      - "*.[0-9].log"
+  register: gz_files
+
+- name: "Delete this files"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ gz_files.files }}"
+  when: gz_files.matched > 0
+
+- name: "Find files not updated in the last 10 days"
+  ansible.builtin.find:
+    paths: /var/log/
+    recurse: true
+    file_type: file
+    age: "10d"
+    age_stamp: mtime
+  register: old_files
+
+- name: "Delete this files"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ old_files.files }}"
+  when: old_files.matched > 0
+
+- name: "Delete files and dirs"
+  ansible.builtin.file:
+    path: "/var/log/{{ item }}"
+    state: absent
+  with_items:
+    - installer
+    - fontconfig.log
+    - README
+    - runit
+
+- name: "Delete empty dirs only"
+  ansible.builtin.command: "rmdir /var/log/{{ item }}"
+  loop:
+    - sysstat
+    - salt
+    - vmware-imc
+    - private
+    - apparmor
+  changed_when: false
+  failed_when: false

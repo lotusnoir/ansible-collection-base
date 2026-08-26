@@ -1,0 +1,3 @@
+---
+- name: "Upgrade tasks"
+  ansible.builtin.include_tasks: "setup-{{ ansible_facts.os_family | lower }}.yml"

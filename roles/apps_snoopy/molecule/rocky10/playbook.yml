@@ -1,0 +1,21 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    snoopy_install_mode: >-
+      {{ 'src'
+         if (
+           (ansible_facts.distribution == 'Debian' and (ansible_facts.distribution_major_version | int) >= 13)
+           or
+           (ansible_facts.os_family == 'RedHat' and (ansible_facts.distribution_major_version | int) == 10)
+         )
+         else 'repo'
+      }}
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-apps_snoopy

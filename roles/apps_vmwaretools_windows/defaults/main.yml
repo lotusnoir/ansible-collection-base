@@ -1,0 +1,12 @@
+---
+### Install
+# wmwaretools_version: '0.24.0'
+# wmwaretools_package_name: 'wmwaretools-{{ wmwaretools_version }}-{{ _wmwaretools_arch }}.msi'
+# wmwaretools_download_url: 'https://github.com/prometheus-community/wmwaretools/releases/download/v{{ wmwaretools_version }}'
+
+### config
+vmwaretools_primary_int_subnet: "172."
+wmwaretools_config:
+  guestinfo:
+    exclude-nics: "docker*,br-*,veth*,lo*,vEthernet*"
+    primary-nics: "{{ private_interface }}"

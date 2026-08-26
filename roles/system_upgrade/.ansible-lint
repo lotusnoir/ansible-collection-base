@@ -1,0 +1,9 @@
+---
+skip_list:
+  - '106'
+  - '401'
+  - 'schema'
+  - 'yaml[line-length]'
+  - ignore-errors
+  - package-latest
+  - command-instead-of-module

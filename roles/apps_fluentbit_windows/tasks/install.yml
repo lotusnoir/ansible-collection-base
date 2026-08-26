@@ -1,0 +1,46 @@
+---
+- name: "Ensure directories exist"
+  ansible.windows.win_file:
+    path: C:\fluent-bit\conf\conf.d
+    state: directory
+
+- name: "Download"
+  ansible.windows.win_get_url:
+    url: https://releases.fluentbit.io/2.1/fluent-bit-2.1.10-win64.exe
+    dest: C:\fluent-bit\install-fluent-bit.exe
+
+- name: "Install"
+  ansible.windows.win_powershell:
+    script: Start-Process -Wait -FilePath "c:\fluent-bit\install-fluent-bit.exe" -ArgumentList "/S /D=c:\fluent-bit"
+
+- name: "Create config file fluent-bit.conf"
+  ansible.windows.win_template:
+    src: fluent-bit-windows.conf.j2
+    dest: C:\fluent-bit\conf\fluent-bit.conf
+
+- name: "Create parser file parsers.conf"
+  ansible.windows.win_template:
+    src: parsers.conf.j2
+    dest: C:\fluent-bit\conf\parsers.conf
+
+- name: Create empty conf file
+  ansible.windows.win_file:
+    path: C:\fluent-bit\conf\conf.d\empty.conf
+    state: touch
+
+- name: "Create service"
+  ansible.windows.win_powershell:
+    script: |
+      New-Service fluent-bit `
+        -BinaryPathName "c:\fluent-bit\bin\fluent-bit.exe -c c:\fluent-bit\conf\fluent-bit.conf" `
+        -StartupType Automatic `
+        -ErrorAction Continue
+
+      Set-ItemProperty `
+        -Path "HKLM:\SYSTEM\CurrentControlSet\Services\fluent-bit" `
+        -Name "ImagePath" `
+        -Value "c:\fluent-bit\bin\fluent-bit.exe -c c:\fluent-bit\conf\fluent-bit.conf"
+
+- name: "Restart service"
+  ansible.windows.win_powershell:
+    script: Restart-Service fluent-bit

@@ -1,0 +1,4 @@
+---
+cleanpacker_grub_path: /etc/sysconfig/grub
+cleanpacker_grub_cmd: 'GRUB_CMDLINE_LINUX="crashkernel=auto rhgb quiet numa=off transparent_hugepage=never"'
+cleanpacker_rebuild_grub_cmd: "grub2-mkconfig -o /boot/grub2/grub.cfg"

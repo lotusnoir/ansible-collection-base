@@ -1,0 +1,4 @@
+---
+__motd_config_path: "/etc/update-motd.d"
+__motd_default_remove:
+  - 10-uname

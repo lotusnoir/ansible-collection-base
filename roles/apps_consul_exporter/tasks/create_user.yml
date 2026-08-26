@@ -1,0 +1,15 @@
+---
+- name: "Creating user group"
+  ansible.builtin.group:
+    name: "{{ consul_exporter_group }}"
+    state: present
+  become: true
+
+- name: "Creating user"
+  ansible.builtin.user:
+    createhome: false
+    group: "{{ consul_exporter_group }}"
+    name: "{{ consul_exporter_user }}"
+    shell: /bin/false
+    system: true
+  become: true

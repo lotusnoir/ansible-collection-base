@@ -1,0 +1,94 @@
+---
+- name: "Get current version"
+  ansible.builtin.shell: |
+    set -o pipefail
+    {{ aide_install_dir }}/aide --version | grep -oP 'AIDE \K[0-9.]+'
+  args:
+    executable: /bin/bash
+  changed_when: false
+  register: __installed_version
+  when: __installed_bin.stat.exists
+
+- name: "Install tasks"
+  when: (not __installed_bin.stat.exists) or (__installed_version is defined and aide_version not in __installed_version.stdout) or aide_install_force
+  block:
+    - name: "Create dirs"
+      ansible.builtin.file:
+        path: "{{ item | safe | trim }}"
+        state: directory
+        owner: "root"
+        group: "root"
+        mode: "0755"
+      loop:
+        - "{{ aide_db_path }}"
+        - "{{ aide_log_path }}"
+        - "{{ aide_config_path }}"
+        - "{{ aide_temp_dir }}/{{ role_path | basename }}"
+
+    - name: "Install dependencies"
+      ansible.builtin.package:
+        name: "{{ aide_compile_pkg }}"
+        state: present
+      register: __pkg_result
+      retries: 12
+      delay: 10
+      until: __pkg_result is success
+
+    - name: "Copy local binary"
+      ansible.builtin.copy:
+        src: "{{ aide_local_files }}"
+        dest: "{{ aide_temp_dir }}/{{ aide_pkg_name }}"
+        mode: "0755"
+      when: aide_install_origin == "local"
+
+    - name: "Download binary by host"
+      ansible.builtin.get_url:
+        url: "{{ aide_dl_url }}"
+        dest: "{{ aide_temp_dir }}/{{ aide_pkg_name }}"
+        timeout: 60
+        mode: "0644"
+      when:
+        - aide_install_origin == "internet"
+        - aide_dl_executor == "host"
+
+    - name: "Download binary by localhost"
+      ansible.builtin.get_url:
+        url: "{{ aide_dl_url }}"
+        dest: "{{ aide_temp_dir }}/{{ aide_pkg_name }}"
+        timeout: 60
+        mode: "0644"
+      delegate_to: localhost
+      when:
+        - aide_install_origin == "internet"
+        - aide_dl_executor == "localhost"
+
+    - name: "Copy local binary"
+      ansible.builtin.copy:
+        src: "{{ aide_temp_dir }}/{{ aide_pkg_name }}"
+        dest: "{{ aide_temp_dir }}/{{ aide_pkg_name }}"
+        mode: "0755"
+      when:
+        - aide_install_origin == "internet"
+        - aide_dl_executor == "localhost"
+
+    - name: "Unarchive"
+      ansible.builtin.unarchive:
+        src: "{{ aide_temp_dir }}/{{ aide_pkg_name }}"
+        dest: "{{ aide_temp_dir }}/{{ role_path | basename }}"
+        remote_src: true
+        mode: "0644"
+
+    - name: "Run configure..."
+      ansible.builtin.command: ./configure --with-e2fsattrs --bindir={{ aide_bin_dir }}
+      args:
+        chdir: "{{ aide_temp_dir }}/{{ role_path | basename }}"
+      changed_when: false
+
+    - name: "Run make..."
+      community.general.make:
+        chdir: "{{ aide_temp_dir }}/{{ role_path | basename }}"
+
+    - name: "Run make install..."
+      community.general.make:
+        chdir: "{{ aide_temp_dir }}/{{ role_path | basename }}"
+        target: install

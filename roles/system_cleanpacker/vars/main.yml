@@ -1,0 +1,3 @@
+---
+cleanpacker_grub_path: /etc/default/grub
+cleanpacker_rebuild_grub_cmd: "update-grub"

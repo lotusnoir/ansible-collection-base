@@ -1,0 +1,23 @@
+---
+- name: Disable useless services in VM
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+  loop:
+    - atd.service
+    - man-db.timer
+    - console-setup.service
+    - keyboard-setup.service
+    - vgauth.service
+    - blk-availability.service
+    - systemd-pstore.service
+    - grub-common.service
+    - wtmpdb-update-boot.service
+  failed_when: false
+
+- name: Purge at package
+  ansible.builtin.apt:
+    name: at
+    state: absent
+    purge: true

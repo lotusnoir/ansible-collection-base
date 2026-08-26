@@ -1,0 +1,22 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    grub_timeout: 5
+    grub_recordfail_timeout: "5"
+    grub_cmdline: "ipv6.disable=1 apparmor=1 security=apparmor"
+    grub_add_filed:
+      - file: 01_passwd
+        value: |
+          set superusers='root' password_pbkdf2 root grub.pbkdf2.sha512.10000.7C6DC0B6EA14D77D91C260C7410EDD5DF807295BE942849B574797
+      - file: 10_linux
+        regex: "CLASS="
+        value: "--unrestricted"
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-system_grub

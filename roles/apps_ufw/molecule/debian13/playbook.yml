@@ -1,0 +1,17 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    ufw_docker: true
+    ufw_icmp_check_disable: true
+    ufw_before_rules:
+      - "-A ufw-before-input -p tcp --dport 80 -i eth0 -m state --state NEW -m recent --set"
+      - "-A ufw-before-input -p tcp --dport 80 -i eth0 -m state --state NEW -m recent --update --seconds 2 --hitcount 20 -j DROP"
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-apps_ufw

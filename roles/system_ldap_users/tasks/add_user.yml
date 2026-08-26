@@ -1,0 +1,36 @@
+---
+- name: "Create user {{ item.name }}"
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    state: present
+    shell: /bin/bash
+    groups: "{{ item.groups }}"
+    append: "yes"
+
+- name: "Retrieve ssh keys from ldap for {{ item.name }}"
+  ansible.builtin.shell: |
+    set -o pipefail
+    /usr/bin/ldapsearch -o ldif-wrap=no -x -h "{{ users_ldap_host }}" -b "{{ users_ldap_binddn }}" -D "{{ users_ldap_user }}" -w "{{ users_ldap_pwd }}" '(&(objectClass={{ users_ldap_class }})(uid='"{{ item.name }}"'))' '{{ users_ldap_ssh_field }}' | grep "^{{ users_ldap_ssh_field }}"
+  args:
+    executable: /usr/bin/bash
+  delegate_to: localhost
+  run_once: true
+  register: ssh_keys
+  changed_when: false
+
+- name: "Set fact user keys for {{ item.name }}"
+  ansible.builtin.set_fact:
+    user_keys: "{{ ssh_keys.stdout_lines | regex_replace(users_ldap_ssh_field + ': ', '') }}"
+
+- name: "Add ssh keys for {{ item.name }}"
+  ansible.posix.authorized_key:
+    user: "{{ item.name }}"
+    state: present
+    key: "{{ sshkey }}"
+  loop: "{{ user_keys }}"
+  loop_control:
+    loop_var: sshkey
+
+- name: "Check that password expired is disable"
+  ansible.builtin.command: chage -M 99999 "{{ item.name }}"
+  changed_when: false

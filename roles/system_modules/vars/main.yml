@@ -1,0 +1,3 @@
+---
+_modules_load_file: "/etc/modules-load.d/modules.conf"
+_modules_modprobe_dir: "/etc/modprobe.d/"

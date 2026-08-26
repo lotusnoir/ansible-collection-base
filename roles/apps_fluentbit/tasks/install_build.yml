@@ -1,0 +1,138 @@
+---
+- name: "Ensure directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  with_items:
+    - "{{ fluentbit_install_dir }}"
+    - "{{ fluentbit_install_dir }}/conf.d"
+    - "{{ fluentbit_buffer_path }}"
+
+- name: "Ensure directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: adm
+    mode: "2755"
+  with_items:
+    - "{{ fluentbit_log_dir }}"
+
+- name: "Make sqlitle human readable db file"
+  ansible.builtin.copy:
+    dest: "/root/.sqliterc"
+    content: |
+      .headers on
+      .mode column
+      .width 5 82 12 12 10
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: "Download the version ({{ fluentbit_version }})"
+  ansible.builtin.get_url:
+    url: "{{ fluentbit_pkg_name_url }}"
+    dest: /tmp/{{ fluentbit_pkg_name }}
+    timeout: 120
+    mode: "0644"
+
+- name: "Unarchive {{ fluentbit_pkg_name }}"
+  ansible.builtin.unarchive:
+    remote_src: true
+    src: "/tmp/{{ fluentbit_pkg_name }}"
+    dest: "/tmp/"
+    mode: "1777"
+
+- name: "Install build requirement packages"
+  ansible.builtin.package:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - cmake
+    - g++
+    - flex
+    - bison
+    - libssl-dev
+    - libsystemd-dev
+    - autoconf
+    - libsasl2-dev
+
+- name: "Configure source"
+  ansible.builtin.command: cmake -DFLB_OUT_KAFKA=On -DFLB_HTTP_SERVER=on -DFLB_EXAMPLES=off ..
+  args:
+    chdir: "/tmp/fluent-bit-{{ fluentbit_version }}/build/"
+  changed_when: false
+
+- name: "Build the sources (5min)"
+  community.general.make:
+    chdir: "/tmp/fluent-bit-{{ fluentbit_version }}/build/"
+
+#    ### Probleme with glic when building locally
+#    - name: "LOCAL - Download the version ({{ fluentbit_version }})"
+#      become: false
+#      get_url:
+#        url: '{{ fluentbit_pkg_name_url }}'
+#        dest: /tmp/{{ fluentbit_pkg_name }}
+#        timeout: 120
+#        mode: 0644
+#      delegate_to: localhost
+#      run_once: true
+#
+#    - name: "LOCAL - Unarchive {{ fluentbit_pkg_name }}"
+#      become: false
+#      unarchive:
+#        remote_src: true
+#        src: "/tmp/{{ fluentbit_pkg_name }}"
+#        dest: "/tmp/"
+#        mode: '1777'
+#      delegate_to: localhost
+#      run_once: true
+#
+#    - name: "LOCAL - Add options on make"
+#      become: false
+#      command: cmake -DFLB_OUT_KAFKA=On -DFLB_HTTP_SERVER=on -DFLB_SHARED_LIB=off -DFLB_EXAMPLES=off ..
+#      args:
+#        chdir: "/tmp/fluent-bit-{{ fluentbit_version }}/build/"
+#      delegate_to: localhost
+#      run_once: true
+#
+#    - name: "LOCAL - Build the sources (5min)"
+#      become: false
+#      make:
+#        chdir: "/tmp/fluent-bit-{{ fluentbit_version }}/build/"
+#      delegate_to: localhost
+#      run_once: true
+
+- name: "Stop fluent-bit service if present"
+  ansible.builtin.service:
+    name: fluent-bit
+    state: stopped
+  when: fluentbit_binary.stat.exists
+
+- name: "Copy executable to {{ fluentbit_binary_name }}"
+  ansible.builtin.copy:
+    src: "/tmp/fluent-bit-{{ fluentbit_version }}/build/bin/fluent-bit"
+    dest: "{{ fluentbit_binary_name }}"
+    mode: "0755"
+    remote_src: true
+  notify:
+    - Start fluent-bit
+
+- name: "Clean source temp directory"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - "/tmp/fluent-bit-{{ fluentbit_version }}"
+    - "/tmp/{{ fluentbit_pkg_name }}"
+
+- name: "Create a systemd init script"
+  ansible.builtin.template:
+    src: fluent-bit.service.j2
+    dest: /lib/systemd/system/fluent-bit.service
+    owner: root
+    group: root
+    mode: "0644"

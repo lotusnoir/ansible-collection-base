@@ -1,0 +1,190 @@
+{{ ansible_managed | comment }}
+
+[SERVICE]
+    Flush        2
+    Daemon       Off
+    Log_File     {{ fluentbit_log_dir }}/fluentbit.log
+    Log_Level    {{ fluentbit_loglevel }}
+
+    # Parsers_File
+    # ============
+    Parsers_File parsers.conf
+
+{% if fluentbit_http_server == "On" %}
+    # HTTP Server
+    # ===========
+    HTTP_Server  {{ fluentbit_http_server }}
+    HTTP_Listen  {{ fluentbit_http_bind }}
+    HTTP_Port    {{ fluentbit_http_port }}
+{% endif %}
+
+    # https://docs.fluentbit.io/manual/configuration/buffering
+    storage.path              {{ fluentbit_buffer_path }}
+    storage.sync              {{ fluentbit_buffer_sync }}
+    storage.checksum          {{ fluentbit_buffer_checksum }}
+    storage.backlog.mem_limit {{ fluentbit_buffer_mem_limit }}
+
+
+{% if fluentbit_include_d %}
+@INCLUDE conf.d/*.conf
+{% endif %}
+
+#####################################################
+# INPUT
+#####################################################
+
+{% for input in fluentbit_inputs %}
+[INPUT]
+    Name {{ input.name }}
+{% if input.path is defined %}
+    Path {{ input.path }}
+{% endif %}
+{% if input.listen is defined %}
+    Listen {{ input.listen }}
+{% endif %}
+{% if input.port is defined %}
+    Port {{ input.port }}
+{% endif %}
+{% if input.mode is defined %}
+    Mode {{ input.mode }}
+{% endif %}
+{% if input.storage_type is defined %}
+    storage.type {{ input.storage_type }}
+{% endif %}
+{% if input.parser is defined %}
+    Parser {{ input.parser }}
+{% endif %}
+{% if input.alias is defined %}
+    Alias {{ input.alias }}
+{% endif %}
+{% if input.tag is defined %}
+    Tag {{ input.tag }}
+{% endif %}
+{% if input.path_key is defined %}
+    Path_Key {{ input.path_key }}
+{% endif %}
+{% if input.db is defined %}
+    DB {{ input.db }}
+{% endif %}
+{% if input.db_locking is defined %}
+    DB.locking {{ input.db_locking }}
+{% endif %}
+{% if input.scrape_interval is defined %}
+    scrape_interval {{ input.scrape_interval }}
+{% endif %}
+{% if input.buffer_chunk_size is defined %}
+    Buffer_Chunk_Size {{ input.buffer_chunk_size }}
+{% endif %}
+{% if input.buffer_max_size is defined %}
+    Buffer_Max_Size {{ input.buffer_max_size }}
+{% endif %}
+{% if input.refresh_interval is defined %}
+    Refresh_Interval {{ input.refresh_interval }}
+{% endif %}
+{% if input.ignore_older is defined %}
+    Ignore_Older {{ input.ignore_older }}	#help to not crash on start with too many open file
+{% endif %}
+{% if input.mem_buf_limit is defined %}
+    Mem_Buf_Limit {{ input.mem_buf_limit }}
+{% endif %}
+{% endfor %}
+
+#####################################################
+# FILTERS
+#####################################################
+
+{% for filter in fluentbit_filters %}
+[FILTER]
+    Name {{ filter.name }}
+{% if filter.alias is defined %}
+    Alias {{ filter.alias }}
+{% endif %}
+    Match {{ filter.match }}
+{% if filter.record is defined %}
+    Record {{ filter.record }}
+{% endif %}
+{% if filter.regex is defined %}
+    regex {{ filter.regex }}
+{% endif %}
+{% if filter.rules is defined %}
+{% for v in filter.rules %}
+    {{ v }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+#####################################################
+# OUTPUT
+#####################################################
+
+{% for output in fluentbit_outputs %}
+[OUTPUT]
+    Name {{ output.name }}
+{% if output.alias is defined %}
+    Alias {{ output.alias }}
+{% endif %}
+{% if output.match is defined %}
+    Match {{ output.match }}
+{% endif %}
+{% if output.match_regex is defined %}
+    match_regex {{ output.match_regex }}
+{% endif %}
+{% if output.brokers is defined %}
+    Brokers {{ output.brokers }}
+{% endif %}
+{% if output.topics is defined %}
+    Topics {{ output.topics }}
+{% endif %}
+{% if output.timestamp_format is defined %}
+    Timestamp_Format {{ output.timestamp_format }}
+{% endif %}
+{% if output.host is defined %}
+    Host {{ output.host }}
+{% endif %}
+{% if output.port is defined %}
+    Port {{ output.port }}
+{% endif %}
+{% if output.storage_total_limit_size is defined %}
+    storage.total_limit_size {{ output.storage_total_limit_size }}
+{% endif %}
+{% if output.retry_limit is defined %}
+    Retry_Limit {{ output.retry_limit }}
+{% endif %}
+{% endfor %}
+
+#[SERVICE]
+#    flush 5
+#    log_level warn
+#    log_file C:\fluent-bit\logs\fluent-bit.log
+#    parsers_file parsers.conf
+#    plugins_file plugins.conf
+#    storage.path C:\fluent-bit\logs
+#    storage.sync normal
+#    storage.checksum off
+#    storage.backlog.mem_limit 50M
+#    http_server on
+#    http_listen 0.0.0.0
+#    http_port 9224
+#
+#[INPUT]
+#    name winevtlog
+#    channels Security,System,Application,Microsoft-Windows-Windows Defender/Operational,Windows PowerShell,Microsoft-Windows-Windows Firewall With Advanced Security/Firewall
+#    tag system-windows
+#    db winevtlog.sqlite
+#    interval_sec 1
+#
+#@INCLUDE C:\fluent-bit\conf\conf.d\*.conf
+#
+#[FILTER]
+#    Name record_modifier
+#    Match *
+#    Record hostname ${HOSTNAME}
+#
+#[OUTPUT]
+#    name  forward
+#    match *
+#    storage.total_limit_size  200M
+#    Retry_Limit 10
+#    host 10.1.2.3
+#    port {{fluentbit_output_port}}
+#

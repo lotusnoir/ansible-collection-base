@@ -1,0 +1,12 @@
+---
+### add bashrc config for future users
+hstr_enable_skel: false
+
+### add bashrc config for root
+hstr_enable_user_root: false
+
+### add bashrc config for all curents users except root
+hstr_enable_users_all: false
+
+### add bashrc config for specific users only except root
+hstr_enable_users_list: []

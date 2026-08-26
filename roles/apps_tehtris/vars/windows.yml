@@ -1,0 +1,6 @@
+---
+tehtris_tmp_path: "C:\tmp\tehtris"
+tehtris_binary_file: "TEHTRIS_EDR_{{ tehtris_version }}_Windows.exe"
+tehtris_installer_options: "/qn AGREE_EULA=1 START_TRAY=1 SERVER={{ tehtris_server }} TAG={{ tehtris_tag }}"
+tehtris_service_name: "zDAS"
+tehtris_config_path: 'C:\Program File (x86)\eGambit\'

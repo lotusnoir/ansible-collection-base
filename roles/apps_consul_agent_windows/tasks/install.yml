@@ -1,0 +1,72 @@
+---
+- name: "Ensure TLS1.2 is used"
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\Microsoft\.NETFramework\v4.0.30319
+    name: SchUseStrongCrypto
+    data: 1
+    type: dword
+
+- name: "Create install directories"
+  ansible.windows.win_file:
+    dest: "{{ item }}"
+    state: directory
+  with_items:
+    - "{{ consul_win_install_path }}"
+    - "{{ consul_win_configd_path }}"
+    - "{{ consul_win_bin_path }}"
+
+- name: "Check if consul already installed"
+  ansible.windows.win_stat:
+    path: "{{ consul_win_bin_path }}\\consul.exe"
+  register: consul_info
+
+- name: "Download and unarchive"
+  when: not consul_info.stat.exists
+  block:
+    - name: "Create temporary directory to download binary"
+      ansible.windows.win_tempfile:
+        state: directory
+        prefix: ansible-consul
+      register: consul_temp_dir
+
+    - name: "Download Binary"
+      ansible.windows.win_get_url:
+        url: "{{ consul_win_zip_url }}"
+        dest: "{{ consul_temp_dir.path }}\\{{ consul_win_pkg }}"
+
+    - name: "Stop service if exist"
+      ansible.windows.win_powershell:
+        script: if (Get-Service -Name Consul-service) {Stop-service -Name Consul-service}
+
+    - name: "Unarchive and install binary"
+      win_unzip:
+        src: "{{ consul_temp_dir.path }}\\{{ consul_win_pkg }}"
+        dest: "{{ consul_win_bin_path }}"
+
+  always:
+    - name: "Cleanup"
+      ansible.windows.win_file:
+        path: "{{ consul_temp_dir.path }}"
+        state: absent
+
+- name: "Create config.d configuration"
+  ansible.windows.win_template:
+    src: consul_config_d.json.j2
+    dest: "{{ consul_win_configd_path }}\\{{ item }}.json"
+  with_items:
+    "{{ consul_win_agent_config_d }}"
+  notify: Restart consul
+
+- name: "Create configuration"
+  ansible.windows.win_template:
+    src: consul.hcl.j2
+    dest: "{{ consul_win_configd_path }}\\consul.hcl"
+  notify: Restart consul
+
+- name: "Create a new service with extra details"
+  community.windows.win_nssm:
+    name: Consul-service
+    application: "{{ consul_win_bin_path }}\\consul.exe"
+    arguments: "agent -config-dir={{ consul_win_configd_path }} {{ consul_win_agent_systemd_args }}"
+    state: started
+  notify: Restart consul

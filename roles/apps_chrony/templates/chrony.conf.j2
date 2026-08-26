@@ -1,0 +1,65 @@
+{{ ansible_managed | comment }}
+
+##################################
+# NTP Servers
+##################################
+{% for item in chrony_ntp_servers %}
+{%   if item['options'] is not defined %}
+{{ item['type'] | default('server') }} {{ item['server'] }}
+{%   elif item['options'] is defined %}
+{{ item['type'] | default('server') }} {{ item['server'] }}{% for opt in item['options'] %} {{ opt['option'] }}{% if opt['val'] is defined %} {{ opt['val'] }}{% endif %}{% endfor %}
+
+{%   endif %}
+{% endfor %}
+{% if (chrony_allow_hosts is defined and chrony_allow_hosts | length > 0) or (chrony_deny_hosts is defined and chrony_deny_hosts | length > 0) %}
+
+##################################
+# Internal Clients
+##################################
+{% for item in chrony_allow_hosts %}
+allow {{ item }}
+{% endfor %}
+{% for item in chrony_deny_hosts %}
+deny {{ item }}
+{% endfor %}
+{% endif %}
+
+##################################
+# Files and States
+##################################
+driftfile {{ chrony_driftfile }}
+dumpdir {{ chrony_dumpdir }}
+{% if chrony_keyfile_enabled | bool %}
+keyfile {{ _chrony_keyfile }}
+{% endif %}
+
+##################################
+# Initial Synchronisation
+##################################
+makestep {{ chrony_makestep }}
+{% if chrony_dumponexit is sameas true %}
+dumponexit
+{% endif %}
+{% if chrony_local_stratum is defined and chrony_local_stratum > 0 %}
+local stratum {{ chrony_local_stratum }}
+{% endif %}
+
+##################################
+# Logs
+##################################
+{% if chrony_noclientlog is sameas true %}
+noclientlog
+{% endif %}
+log {{ chrony_log|join(' ') }}
+logchange {{ chrony_logchange }}
+logdir {{ chrony_logdir }}
+
+##################################
+# Hardware Synchronisation
+##################################
+{% if chrony_rtcsync_enabled | bool %}
+rtcsync
+{% endif %}
+{% if chrony_burst_enabled | bool %}
+burst
+{% endif %}

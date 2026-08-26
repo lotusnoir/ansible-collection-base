@@ -1,0 +1,21 @@
+{{ ansible_managed | comment }}
+
+[Unit]
+Description=Prometheus Consul Exporter
+After=network-online.target
+StartLimitInterval=0
+
+[Service]
+User={{ consul_exporter_user }}
+Group={{ consul_exporter_group }}
+ExecStart={{ consul_exporter_install_dir }}/{{ consul_exporter_bin_name }} --web.listen-address=:{{ consul_exporter_port }} {{ consul_exporter_flags }}
+ExecReload=/bin/kill -HUP $MAINPID
+
+Type=simple
+Restart=always
+SyslogIdentifier=consul_exporter
+RestartSec=1
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

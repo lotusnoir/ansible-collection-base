@@ -1,0 +1,11 @@
+---
+- name: Nettoyer les fichiers cloud-init d'Ubuntu
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ _clean_file }}"
+  when: ansible_distribution == "Ubuntu"
+
+- name: Nettoyer cloud-init
+  ansible.builtin.command: cloud-init clean -s -l
+  changed_when: false

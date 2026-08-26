@@ -1,0 +1,20 @@
+---
+- name: Remove Elastic Agent directory
+  ansible.builtin.file:
+    path: "{{ elastic_agent_config_path }}"
+    state: absent
+
+- name: Stop Elastic Agent
+  ansible.builtin.systemd:
+    name: elastic-agent
+    state: stopped
+  failed_when: false
+
+- name: Remove systemd unit
+  ansible.builtin.file:
+    path: /etc/systemd/system/elastic-agent.service
+    state: absent
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true

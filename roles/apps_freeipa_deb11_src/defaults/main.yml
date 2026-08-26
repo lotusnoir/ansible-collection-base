@@ -1,0 +1,5 @@
+---
+freeipa_client_pkgs:
+  - freeipa-client
+  - freeipa-common
+  - sudo

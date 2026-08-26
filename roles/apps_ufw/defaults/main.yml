@@ -1,0 +1,32 @@
+---
+### Repo for redhat
+ufw_install_repo: true
+
+### Rules
+ufw_rules: []
+#  - { from_ip: "127.0.0.1/8", rule: allow, comment: "Allow localhost" }
+#  - { from_ip: "0.0.0.0/0", to_port: 22, proto: "tcp", rule: "allow", comment: "bastion / ssh" }
+
+### Manage config
+ufw_start_service: true
+ufw_manage_config: true
+ufw_config_file: /etc/default/ufw
+ufw_config:
+  IPV6: "no"
+  DEFAULT_INPUT_POLICY: DROP
+  DEFAULT_OUTPUT_POLICY: ACCEPT
+  DEFAULT_FORWARD_POLICY: DROP
+  DEFAULT_APPLICATION_POLICY: SKIP
+  MANAGE_BUILTINS: "no"
+  IPT_SYSCTL: /etc/ufw/sysctl.conf
+  IPT_MODULES: ""
+
+### before and after rules
+# docker iptables special rules
+ufw_docker: false
+# ignore icmp checks
+ufw_icmp_check_disable: false
+
+ufw_before_rules: []
+ufw_before_nat_rules: []
+ufw_after_rules: []

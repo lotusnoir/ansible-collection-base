@@ -1,0 +1,167 @@
+#!/bin/bash
+
+# Configuration
+REFERENCE_FILE="{{ conntrack_textfile_exporter_log_file }}"
+PROMETHEUS_FILE="{{ conntrack_textfile_exporter_prometheus_file }}"
+ALL_IPS=$(ip -o addr | awk '!/^[0-9]*: ?lo|link\/ether/ {print $4}' | sed 's/\/24//' | tr '\r\n' ' ')
+
+# Ensure the reference file exists
+touch "$REFERENCE_FILE"
+touch "$PROMETHEUS_FILE"
+
+update_reference_file_udp() {
+    #######################################
+    for i in $ALL_IPS; do
+        conntrack -L -p udp -s $i 2>/dev/null | awk '{print $1, $4, $5, $7}' | awk -F '[=: ]' '{print $1, $3, $5, $7}' | sort | uniq -c {% if conntrack_textfile_exporter_udp_exclude is defined and conntrack_textfile_exporter_udp_exclude | length > 0 %}| grep -v '{{ conntrack_textfile_exporter_udp_exclude }}'{% endif %} > /tmp/current_ips_udp_OUT.txt
+        while read -r COUNT PROTOCOL SRC DST PORT; do
+            if grep -qw "OUT $PROTOCOL $SRC $DST $PORT" "$REFERENCE_FILE"; then
+{% if conntrack_textfile_exporter_count_values is sameas true %}
+                OLD_COUNT=$(grep -w "OUT $PROTOCOL $SRC $DST $PORT" "$REFERENCE_FILE" | awk '{print $1}')
+                NEW_COUNT=$((OLD_COUNT + COUNT))
+                sed -i "/OUT $PROTOCOL $SRC $DST $PORT/d" "$REFERENCE_FILE"
+                echo "$NEW_COUNT OUT $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                sed -i "/conntrack_connections_out{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"}/d" "$PROMETHEUS_FILE"
+                echo "conntrack_connections_out{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} $NEW_COUNT" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% else %}
+                echo "OUT $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                echo "conntrack_connections_out{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} 0" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% endif %}
+            else
+{% if conntrack_textfile_exporter_count_values is sameas true %}
+                echo "$COUNT OUT $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                echo "conntrack_connections_out{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} $NEW_COUNT" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% else %}
+                echo "OUT $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                echo "conntrack_connections_out{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} 0" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% endif %}
+            fi
+        done < /tmp/current_ips_udp_OUT.txt
+    done
+
+    #######################################
+    for i in $ALL_IPS; do
+      conntrack -L -p udp -d $i 2>/dev/null | awk '{print $1, $4, $5, $7}' | awk -F '[=: ]' '{print $1, $3, $5, $7}' | sort | uniq -c {% if conntrack_textfile_exporter_udp_exclude is defined and conntrack_textfile_exporter_udp_exclude | length > 0 %}| grep -v '{{ conntrack_textfile_exporter_udp_exclude }}'{% endif %} > /tmp/current_ips_udp_IN.txt
+        while read -r COUNT PROTOCOL SRC DST PORT; do
+            if grep -qw "IN $PROTOCOL $SRC $DST $PORT" "$REFERENCE_FILE"; then
+{% if conntrack_textfile_exporter_count_values is sameas true %}
+                OLD_COUNT=$(grep -w "IN $PROTOCOL $SRC $DST $PORT" "$REFERENCE_FILE" | awk '{print $1}')
+                NEW_COUNT=$((OLD_COUNT + COUNT))
+                sed -i "/IN $PROTOCOL $SRC $DST $PORT/d" "$REFERENCE_FILE"
+                echo "$NEW_COUNT IN $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                sed -i "/conntrack_connections_in{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"}/d" "$PROMETHEUS_FILE"
+                echo "conntrack_connections_in{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} $NEW_COUNT" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% else %}
+                echo "IN $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                echo "conntrack_connections_in{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} 0" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% endif %}
+
+            else
+{% if conntrack_textfile_exporter_count_values is sameas true %}
+                echo "$COUNT IN $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                echo "conntrack_connections_in{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} $NEW_COUNT" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% else %}
+                echo "IN $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                echo "conntrack_connections_in{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} 0" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% endif %}
+            fi
+
+      done < /tmp/current_ips_udp_IN.txt
+    done
+
+}
+
+update_reference_file_tcp() {
+    #######################################
+    for i in $ALL_IPS; do
+      conntrack -L -p tcp --state ESTABLISHED -s $i  2>/dev/null | awk '{print $1, $5, $6, $8}' | awk -F '[=: ]' '{print $1, $3, $5, $7}' | sort | uniq -c {% if conntrack_textfile_exporter_tcp_exclude is defined and conntrack_textfile_exporter_tcp_exclude | length > 0 %}| grep -v '{{ conntrack_textfile_exporter_tcp_exclude }}'{% endif %} > /tmp/current_ips_tcp_OUT.txt
+        while read -r COUNT PROTOCOL SRC DST PORT; do
+            if grep -qw "OUT $PROTOCOL $SRC $DST $PORT" "$REFERENCE_FILE"; then
+{% if conntrack_textfile_exporter_count_values is sameas true %}
+                OLD_COUNT=$(grep -w "OUT $PROTOCOL $SRC $DST $PORT" "$REFERENCE_FILE" | awk '{print $1}')
+                NEW_COUNT=$((OLD_COUNT + COUNT))
+                sed -i "/OUT $PROTOCOL $SRC $DST $PORT/d" "$REFERENCE_FILE"
+                echo "$NEW_COUNT OUT $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                sed -i "/conntrack_connections_out{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"}/d" "$PROMETHEUS_FILE"
+                echo "conntrack_connections_out{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} $NEW_COUNT" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% else %}
+                echo "OUT $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                echo "conntrack_connections_out{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} 0" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% endif %}
+            else
+{% if conntrack_textfile_exporter_count_values is sameas true %}
+                echo "$COUNT OUT $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                echo "conntrack_connections_out{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} $COUNT" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% else %}
+                echo "OUT $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                echo "conntrack_connections_out{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} 0" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% endif %}
+            fi
+      done < /tmp/current_ips_tcp_OUT.txt
+    done
+
+    #######################################
+    for i in $ALL_IPS; do
+      conntrack -L -p tcp --state ESTABLISHED -d $i  2>/dev/null | awk '{print $1, $5, $6, $8}' | awk -F '[=: ]' '{print $1, $3, $5, $7}' | sort | uniq -c {% if conntrack_textfile_exporter_tcp_exclude is defined and conntrack_textfile_exporter_tcp_exclude | length > 0 %}| grep -v '{{ conntrack_textfile_exporter_tcp_exclude }}'{% endif %} > /tmp/current_ips_tcp_IN.txt
+        while read -r COUNT PROTOCOL SRC DST PORT; do
+            if grep -qw "IN $PROTOCOL $SRC $DST $PORT" "$REFERENCE_FILE"; then
+{% if conntrack_textfile_exporter_count_values is sameas true %}
+                OLD_COUNT=$(grep -w "IN $PROTOCOL $SRC $DST $PORT" "$REFERENCE_FILE" | awk '{print $1}')
+                NEW_COUNT=$((OLD_COUNT + COUNT))
+                sed -i "/IN $PROTOCOL $SRC $DST $PORT/d" "$REFERENCE_FILE"
+                echo "$NEW_COUNT IN $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                sed -i "/conntrack_connections_in{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"}/d" "$PROMETHEUS_FILE"
+                echo "conntrack_connections_in{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} $NEW_COUNT" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% else %}
+                echo "IN $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                echo "conntrack_connections_in{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} 0" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% endif %}
+            else
+{% if conntrack_textfile_exporter_count_values is sameas true %}
+                echo "$COUNT IN $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                echo "conntrack_connections_in{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} $COUNT" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% else %}
+                echo "IN $PROTOCOL $SRC $DST $PORT" >> "$REFERENCE_FILE"
+{% if conntrack_textfile_exporter_textfile_prometheus is sameas true %}
+                echo "conntrack_connections_in{protocol=\"$PROTOCOL\", source=\"$SRC\", destination=\"$DST\", port=\"$PORT\"} 0" >> "$PROMETHEUS_FILE"
+{% endif %}
+{% endif %}
+            fi
+      done < /tmp/current_ips_tcp_IN.txt
+    done
+}
+
+# Main loop
+while true; do
+    update_reference_file_udp
+    update_reference_file_tcp
+done

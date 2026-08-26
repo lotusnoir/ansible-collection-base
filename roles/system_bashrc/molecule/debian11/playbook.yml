@@ -1,0 +1,22 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    bashrc_configure_skel: true
+    bashrc_users_configure:
+      - root
+      - test
+
+  pre_tasks:
+    - name: Add test user to control custom bashrc
+      ansible.builtin.user:
+        name: test
+        shell: /bin/bash
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-system_bashrc

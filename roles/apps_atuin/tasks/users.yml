@@ -1,0 +1,80 @@
+---
+- name: "Get user info for {{ item }}"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item }}"
+
+- name: "Ensure config directory exists"
+  ansible.builtin.file:
+    path: "{{ ansible_facts.getent_passwd[item][4] }}/.config/atuin"
+    owner: "{{ item }}"
+    state: directory
+    mode: "0750"
+
+- name: "Configure"
+  ansible.builtin.template:
+    dest: "{{ ansible_facts.getent_passwd[item][4] }}/.config/atuin/config.toml"
+    src: config.toml.j2
+    owner: "{{ item }}"
+    mode: "0640"
+
+- name: "Download bash-preexec.sh for bash if needed"
+  ansible.builtin.get_url:
+    url: "https://raw.githubusercontent.com/rcaloras/bash-preexec/master/bash-preexec.sh"
+    dest: "{{ ansible_facts.getent_passwd[item][4] }}/.bash-preexec.sh"
+    mode: "0644"
+  when: ansible_env.SHELL is search('bash')
+
+- name: "Add source of bash-preexec.sh to .bashrc"
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_facts.getent_passwd[item][4] }}/.bashrc"
+    line: "[[ -f ~/.bash-preexec.sh ]] && source ~/.bash-preexec.sh"
+    mode: "0640"
+    insertafter: EOF
+  when: ansible_env.SHELL is search('bash')
+
+- name: Ensure Atuin init is in .zshrc if zsh is present
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_facts.getent_passwd[item][4] }}/.zshrc"
+    line: 'eval "$(atuin init zsh)"'
+    mode: "0640"
+    insertafter: EOF
+    create: true
+  when: ansible_env.SHELL is search('zsh')
+
+- name: Add Atuin init to .bashrc
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_facts.getent_passwd[item][4] }}/.bashrc"
+    line: 'eval "$(atuin init bash)"'
+    mode: "0640"
+    insertafter: EOF
+  when: ansible_env.SHELL is search('bash')
+
+- name: Add Atuin init to fish config if present
+  block:
+    - name: Check if fish config exists
+      ansible.builtin.stat:
+        path: "{{ ansible_facts.getent_passwd[item][4] }}/.config/fish/config.fish"
+      register: fish_config
+
+    - name: Ensure Atuin is initialized in fish config
+      ansible.builtin.lineinfile:
+        path: "{{ fish_config.stat.path }}"
+        regexp: 'atuin init fish \| source'
+        line: "    atuin init fish | source"
+        insertafter: "if status is-interactive"
+        mode: "0640"
+        state: present
+      when: fish_config.stat.exists
+
+- name: Import bash history into Atuin
+  become: true
+  become_user: "{{ item }}"
+  ansible.builtin.shell: atuin import bash
+  args:
+    executable: /bin/bash
+  environment:
+    HOME: "{{ ansible_facts.getent_passwd[item][4] }}"
+  changed_when: false
+  failed_when: false
+  when: not atuin_stat.stat.exists

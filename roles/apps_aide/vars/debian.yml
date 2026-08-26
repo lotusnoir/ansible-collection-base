@@ -1,0 +1,11 @@
+---
+aide_compile_pkg:
+  - gcc
+  - make
+  - bison
+  - flex
+  - libpcre2-dev
+  - pkg-config
+  - zlib1g-dev
+  - libmhash-dev
+  - e2fslibs-dev

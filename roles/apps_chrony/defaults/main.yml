@@ -1,0 +1,64 @@
+---
+### Install
+chrony_install_force: false
+chrony_group: "{% if ansible_facts.os_family == 'RedHat' %}chrony{% else %}_chrony{% endif %}"
+chrony_user: "{% if ansible_facts.os_family == 'RedHat' %}chrony{% else %}_chrony{% endif %}"
+chrony_backup_files: true
+
+### Config
+chrony_allow_hosts: ""
+  #  - 10.0.0.0/8
+  #  - 192.168.0.0/16
+  #  - 172.16.0.0/12
+chrony_deny_hosts: ""
+chrony_daemon_opts: "-F 1"
+chrony_dumpdir: "/var/lib/chrony"
+chrony_driftfile: "/var/lib/chrony/drift"
+chrony_dumponexit: true
+# If set to 0 ignore stratum in source selection with variable stratumweight 0
+chrony_local_stratum: 0
+chrony_makestep: "1 -1"
+chrony_keyfile_enabled: false
+
+chrony_noclientlog: true
+chrony_log:
+  - tracking
+  - measurements
+  - statistics
+chrony_logchange: 0.5
+chrony_logdir: "/var/log/chrony"
+
+# Résilience maximale = 4 opérateurs + 4 horloges atomiques + 4 réseaux
+chrony_ntp_servers:
+  - server: time.cloudflare.com
+    options:
+      - option: iburst
+      - option: minpoll
+        val: 8
+      - option: maxpoll
+        val: 10
+  - server: time.google.com iburst
+    options:
+      - option: iburst
+      - option: minpoll
+        val: 8
+      - option: maxpoll
+        val: 10
+  - server: time.nist.gov iburst
+    options:
+      - option: iburst
+      - option: minpoll
+        val: 8
+      - option: maxpoll
+        val: 10
+  - server: ptbtime1.ptb.de iburst
+    options:
+      - option: iburst
+      - option: minpoll
+        val: 8
+      - option: maxpoll
+        val: 10
+
+# Flag to control if the real time clock is to be kept synchronized.
+chrony_rtcsync_enabled: true
+chrony_burst_enabled: false

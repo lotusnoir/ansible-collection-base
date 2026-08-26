@@ -1,0 +1,30 @@
+---
+- name: "Restart sssd"
+  ansible.builtin.service:
+    name: sssd
+    state: restarted
+
+- name: "Reload systemd"
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: "Restart oddjobd"
+  ansible.builtin.service:
+    name: oddjobd
+    state: restarted
+
+- name: "Authselect apply-changes"
+  ansible.builtin.command: "authselect apply-changes"
+  changed_when: false
+
+- name: "Reload oddjob service"
+  ansible.builtin.systemd:
+    name: "oddjobd"
+    state: restarted
+    daemon_reload: true
+  become: true
+
+- name: "Start oddjobd"
+  ansible.builtin.service:
+    name: oddjobd
+    state: started

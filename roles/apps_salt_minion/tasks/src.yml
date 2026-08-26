@@ -1,0 +1,41 @@
+---
+- name: "Install requierements"
+  ansible.builtin.package:
+    name: '{{ salt_minion_packages }}'
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "Download salt sources..."
+  ansible.builtin.get_url:
+    url: '{{ salt_minion_tgz_url }}'
+    dest: '{{ salt_minion_temp_dir }}/{{ salt_minion_tgz }}'
+    timeout: '60'
+    mode: '0644'
+
+- name: "Ensure install dir exists"
+  ansible.builtin.file:
+    path: '{{ item }}'
+    state: directory
+    mode: '0755'
+  with_items:
+    - '{{ salt_minion_temp_dir }}/salt'
+
+- name: "Unarchive sources..."
+  ansible.builtin.unarchive:
+    src: '{{ salt_minion_temp_dir }}/{{ salt_minion_tgz }}'
+    dest: '{{ salt_minion_temp_dir }}/salt'
+    extra_opts: [--strip-components=1]
+    remote_src: true
+    mode: '0644'
+
+- name: "Install salt-minion..."
+  ansible.builtin.command: "python3 {{ salt_minion_temp_dir }}/salt/setup.py install"
+  changed_when: false
+
+- name: "Remove temporary directory"
+  ansible.builtin.file:
+    path: '{{ salt_minion_temp_dir }}/salt'
+    state: absent

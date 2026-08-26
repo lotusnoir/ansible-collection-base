@@ -1,0 +1,81 @@
+---
+- name: "Import tasks for purge"
+  ansible.builtin.include_tasks: "purge.yml"
+  when: sssd_purge_before_install | bool
+
+- name: "Install requirements"
+  ansible.builtin.package:
+    name: "{{ sssd_pkg }}"
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "Import tasks for debian"
+  ansible.builtin.include_tasks: "setup-{{ ansible_facts.os_family | lower }}.yml"
+  when: ansible_facts.os_family == 'Debian'
+
+- name: "Import tasks for redhat7"
+  ansible.builtin.include_tasks: "setup-{{ ansible_facts.os_family | lower }}7.yml"
+  when: ansible_facts.os_family == 'RedHat' and ansible_facts.distribution_major_version == '7'
+
+- name: "Import tasks for redhat >= 8"
+  ansible.builtin.include_tasks: "setup-{{ ansible_facts.os_family | lower }}.yml"
+  when: ansible_facts.os_family == 'RedHat' and ansible_facts.distribution_major_version >= '8'
+
+- name: "Disable sssd sockets"
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+  with_items:
+    - "{{ sssd_svc_socket_disable }}"
+  when:
+    - sssd_svc_socket_disable is defined
+    - sssd_svc_socket_disable | length > 0
+  notify: Restart sssd
+
+- name: "Configuring sssd"
+  ansible.builtin.template:
+    src: sssd.conf.j2
+    dest: /etc/sssd/sssd.conf
+    owner: root
+    group: "{{ sssd_conf_group | default('root') }}"
+    mode: "{{ sssd_conf_mode | default('0600') }}"
+    backup: true
+  become: true
+  when:
+    - sssd_conf_domains is defined
+    - sssd_conf_domains | length > 0
+  notify: Restart sssd
+
+- name: Ensure override directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/sssd.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when:
+    - sssd_svc_override| bool
+
+- name: Deploy override.conf for sssd
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/sssd.service.d/override.conf
+    owner: root
+    group: root
+    mode: '0644'
+    content: "{{ sssd_svc_override_content }}"
+  notify: Reload systemd
+  when:
+    - sssd_svc_override| bool
+
+- name: "Enable and start sssd"
+  ansible.builtin.service:
+    name: sssd
+    enabled: true
+    state: started
+  when:
+    - sssd_svc_start is defined
+    - sssd_svc_start|bool

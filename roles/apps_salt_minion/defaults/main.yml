@@ -1,0 +1,47 @@
+---
+## Install
+# bootstrap | repo | src (nopt working yet)
+salt_minion_install_method: repo
+salt_minion_force_install: false
+salt_minion_pkg_name: "salt-minion"
+# Used for boostrap and src. repo install latest
+# due to breaking changes https://saltproject.io/blog/salt-project-package-repo-migration-and-guidance/
+# older version than 3006.* can't be installed via bootstrap or repo, use src mode instead
+salt_minion_version: "3006.1"
+
+## install src
+salt_minion_packages:
+  - apt-transport-https
+  - ca-certificates
+  - python3-jinja2
+  - python3-markupsafe
+  - python3-distro
+  - python3-jmespath
+  - python3-msgpack
+  - python3-packaging
+  - python3-psutil
+  - python3-requests
+
+salt_minion_tgz: "salt-{{ salt_minion_version }}.tar.gz"
+salt_minion_tgz_url: "https://github.com/saltstack/salt/releases/download/v{{ salt_minion_version }}/{{ salt_minion_tgz }}"
+salt_minion_temp_dir: /tmp
+
+# Install with master interaction
+salt_master_ip: 10.1.2.3
+salt_master_update_keys: false
+
+## Config
+salt_minion_confighost: false
+salt_minion_config: |
+  master: {{ salt_master_ip }}
+  id: {{ ansible_hostname }}
+
+#  proxy_host: {{ http_proxy_host }}
+#  proxy_port: {{ http_proxy_port }}
+#  no_proxy: [localhost, 127.0.0.1, {{ ansible_default_ipv4.interface }}]
+#
+#  random_reauth_delay: 270
+#  recon_default: 1000
+#  recon_max: 59000
+#  recon_randomize: True
+#  auth_timeout: 30

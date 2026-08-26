@@ -1,0 +1,135 @@
+---
+- name: "REDHAT | Tasks for Redhat family"
+  when: ansible_facts.os_family in ["RedHat", "Rocky", "OracleLinux"] and ufw_install_repo|bool
+  block:
+    - name: "REDHAT | Check if EPEL repo is already configured"
+      ansible.builtin.stat:
+        path: "/etc/yum.repos.d/epel.repo"
+      register: epel_repo
+
+    - name: "REDHAT | Import EPEL GPG key."
+      ansible.builtin.rpm_key:
+        key: "https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-{{ ansible_facts.distribution_major_version }}"
+        state: present
+      when: not epel_repo.stat.exists
+
+    - name: "REDHAT | Installing epel-release"
+      ansible.builtin.dnf:
+        name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_facts.distribution_major_version }}.noarch.rpm"
+        state: present
+      register: __pkg_result
+      retries: 12
+      delay: 10
+      until: __pkg_result is success
+      when: not epel_repo.stat.exists
+
+- name: "Installing requirement"
+  ansible.builtin.package:
+    name: kmod
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  when: (ansible_facts.distribution == 'Ubuntu' and ansible_facts.distribution_major_version == '20')
+
+- name: "Installing ufw package"
+  ansible.builtin.package:
+    name: ufw
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "Configuring service"
+  ansible.builtin.template:
+    src: "ufw.j2"
+    dest: "{{ ufw_config_file }}"
+    mode: "0644"
+  notify: Reload ufw
+  when: ufw_manage_config
+
+- name: "REDHAT | Fix systemd starting failure"
+  when: ansible_facts.os_family in ["RedHat", "Rocky", "OracleLinux"]
+  block:
+    - name: "REDHAT 10+ | Install kernel modules extra for UFW"
+      ansible.builtin.dnf:
+        name:
+          - "kernel-modules-extra-{{ ansible_kernel }}"
+        state: present
+        update_cache: true
+      when:
+        - ansible_facts.distribution in ['Rocky', 'RedHat']
+        - ansible_facts.distribution_major_version | int == 10
+
+    - name: "REDHAT 10+ | Load required netfilter modules"
+      community.general.modprobe:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - xt_conntrack
+        - xt_state
+        - xt_comment
+        - xt_limit
+        - xt_addrtype
+      when:
+        - ansible_facts.distribution in ['Rocky', 'RedHat']
+        - ansible_facts.distribution_major_version | int == 10
+
+    - name: "REDHAT: Start service"
+      ansible.builtin.service:
+        daemon_reload: true
+        name: ufw
+        state: started
+        enabled: true
+      notify: Restart ufw
+
+    - name: "REDHAT: force-reload"
+      ansible.builtin.command: /usr/libexec/ufw/ufw-init force-reload
+      changed_when: false
+      failed_when: false
+
+- name: "Applying rules"
+  community.general.ufw:
+    comment: "{{ item.comment | default(omit) }}"
+    default: "{{ item.default | default(omit) }}"
+    delete: "{{ item.delete | default(omit) }}"
+    direction: "{{ item.direction | default(omit) }}"
+    from_ip: "{{ item.from_ip | default(omit) }}"
+    from_port: "{{ item.from_port | default(omit) }}"
+    insert: "{{ item.insert | default(omit) }}"
+    insert_relative_to: "{{ item.insert_relative_to | default(omit) }}"
+    interface: "{{ item.interface | default(omit) }}"
+    interface_in: "{{ item.interface_in | default(omit) }}"
+    interface_out: "{{ item.interface_out | default(omit) }}"
+    log: "{{ item.log | default(omit) }}"
+    logging: "{{ item.logging | default(omit) }}"
+    name: "{{ item.name | default(omit) }}"
+    proto: "{{ item.proto | default(omit) }}"
+    route: "{{ item.route | default(omit) }}"
+    rule: "{{ item.rule | default(omit) }}"
+    to_ip: "{{ item.to_ip | default(omit) }}"
+    to_port: "{{ item.to_port | default(omit) }}"
+  with_items: "{{ ufw_rules }}"
+
+- name: "Add Docker specific before rules"
+  ansible.builtin.template:
+    src: "before.rules.j2"
+    dest: "/etc/ufw/before.rules"
+    owner: "root"
+    group: "root"
+    mode: "0640"
+
+- name: "Add Docker specific after rules"
+  ansible.builtin.template:
+    src: "after.rules.j2"
+    dest: "/etc/ufw/after.rules"
+    owner: "root"
+    group: "root"
+    mode: "0640"
+
+- name: "Start and enable ufw"
+  community.general.ufw:
+    state: enabled
+  when: ufw_start_service | bool

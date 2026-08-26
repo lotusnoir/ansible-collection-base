@@ -1,0 +1,11 @@
+---
+- name: Create local users
+  ansible.windows.win_user:
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    state: present
+    groups: "{{ item.groups }}"
+    groups_action: add
+    password_never_expires: true
+    account_disabled: false
+  loop: "{{ windows_tuning_add_users }}"

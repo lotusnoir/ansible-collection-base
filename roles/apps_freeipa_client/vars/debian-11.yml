@@ -1,0 +1,44 @@
+---
+freeipa_client_pkgs_required:
+  - python3-qrcode
+  - python3-jinja2
+  - python3-augeas
+  - bind9-utils
+  - certmonger
+  - dnsutils
+  - krb5-user
+  - libnss3-tools
+  - libxmlrpc-core-c3
+  - python3-ldap
+  - python3-gssapi
+  - python3-dnspython
+  - oddjob-mkhomedir
+  - libsss-sudo
+  - libpam-sss
+  - python3-yubico
+  - python3-usb
+  - python3-setuptools
+  - python3-nss
+  - python3-netaddr
+  - python3-netifaces
+  - python3-libipa-hbac
+  - python3-lxml
+  - python3-dbus
+  - python3-cffi
+  - keyutils
+  - liblua5.2-0
+  - sudo
+
+freeipa_client_deb_pkgs:
+  - librpmio8_4.14.2.1+dfsg1-1.1+b3_amd64.deb
+  - librpm8_4.14.2.1+dfsg1-1.1+b3_amd64.deb
+  - freeipa-common_4.9.7-1_all.deb
+  - python3-ipalib_4.9.7-1_all.deb
+  - python3-ipaclient_4.9.7-1_all.deb
+  - freeipa-client_4.9.7-1_amd64.deb
+#  - http://ftp.fr.debian.org/debian/pool/main/r/rpm/librpmio8_4.14.2.1+dfsg1-1.1+b3_amd64.deb
+#  - http://ftp.fr.debian.org/debian/pool/main/r/rpm/librpm8_4.14.2.1+dfsg1-1.1+b3_amd64.deb
+#  - http://ftp.fr.debian.org/debian/pool/main/f/freeipa/freeipa-common_4.9.7-3_all.deb
+#  - http://ftp.fr.debian.org/debian/pool/main/f/freeipa/python3-ipalib_4.9.7-3_all.deb
+#  - http://ftp.fr.debian.org/debian/pool/main/f/freeipa/python3-ipaclient_4.9.7-3_all.deb
+#  - http://ftp.fr.debian.org/debian/pool/main/f/freeipa/freeipa-client_4.9.7-3+b1_amd64.deb

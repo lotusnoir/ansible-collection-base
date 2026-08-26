@@ -1,0 +1,36 @@
+---
+- name: "Create auth"
+  ansible.builtin.include_tasks: auth.yml
+  with_items: "{{ autologin_users }}"
+  when:
+    - autologin_config_ssh|bool
+    - autologin_users is defined
+    - autologin_users | length > 0
+
+- name: "Create a sudoers.d file to allow nopasswd on sudo commands"
+  ansible.builtin.template:
+    src: "sudo_users.j2"
+    dest: "{{ autologin_sudoersd_path }}/sudo_users"
+    mode: '0440'
+  when:
+    - ansible_facts.distribution != "FreeBSD"
+    - ansible_facts.distribution != "CentOS" and ansible_facts.distribution_major_version != "6"
+    - autologin_config_sudo|bool
+    - autologin_users is defined
+    - autologin_users | length > 0
+
+- name: "Freebsd sudo auth config"
+  ansible.builtin.include_tasks: setup_freebsd.yml
+  when:
+    - ansible_facts.distribution == "FreeBSD"
+    - autologin_config_sudo|bool
+    - autologin_users is defined
+    - autologin_users | length > 0
+
+- name: "Centos6 sudo auth config"
+  ansible.builtin.include_tasks: setup_centos6.yml
+  when:
+    - ansible_facts.distribution == "CentOS" and ansible_facts.distribution_major_version == "6"
+    - autologin_config_sudo|bool
+    - autologin_users is defined
+    - autologin_users | length > 0

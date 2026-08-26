@@ -1,0 +1,137 @@
+---
+- name: "Get current version"
+  ansible.builtin.shell: |
+    set -o pipefail
+    /usr/bin/elastic-agent version | grep -oP 'Binary: \K[0-9.]+'
+  args:
+    executable: /bin/bash
+  changed_when: false
+  register: __installed_version
+  when: __installed_bin.stat.exists
+
+- name: "Get latest tag"
+  ansible.builtin.uri:
+    url: "{{ _elastic_agent_release_api_url }}"
+  failed_when: false
+  register: __github_latest
+  when:
+    - elastic_agent_version == 'latest'
+    - elastic_agent_install_origin == "internet"
+
+- name: "Replace version fact to latest"
+  ansible.builtin.set_fact:
+    elastic_agent_version: "{{ __github_latest.json.tag_name | default(_elastic_agent_default_version) | replace('v', '') }}"
+  when:
+    - elastic_agent_version == 'latest'
+    - elastic_agent_install_origin == "internet"
+
+- name: "Install tasks"
+  when:
+    - not __installed_bin.stat.exists
+      or elastic_agent_version not in __installed_version.stdout | default('')
+      or elastic_agent_install_force
+  block:
+    - name: "Create user"
+      ansible.builtin.include_tasks: create_user.yml
+      when: elastic_agent_user != "root"
+
+    - name: "Create dirs"
+      ansible.builtin.file:
+        path: "{{ item | safe | trim }}"
+        state: directory
+        owner: "{{ elastic_agent_user }}"
+        group: "{{ elastic_agent_group }}"
+        mode: "0755"
+      loop:
+        - "{{ elastic_agent_temp_dir }}/{{ role_path | basename }}"
+
+    - name: "Installing requirements"
+      ansible.builtin.package:
+        name:
+          - unzip
+          - tar
+        state: present
+      become: true
+      register: __pkg_result
+      retries: 12
+      delay: 10
+      until: __pkg_result is success
+
+    - name: "Copy local binary"
+      ansible.builtin.copy:
+        src: "{{ elastic_agent_local_files }}"
+        dest: "{{ elastic_agent_temp_dir }}/{{ elastic_agent_pkg_name }}"
+        mode: "0755"
+      when: elastic_agent_install_origin == "local"
+
+    - name: "Download binary by host"
+      ansible.builtin.get_url:
+        url: "{{ elastic_agent_dl_url }}"
+        dest: "{{ elastic_agent_temp_dir }}/{{ elastic_agent_pkg_name }}"
+        timeout: 60
+        mode: "0644"
+      when:
+        - elastic_agent_install_origin == "internet"
+        - elastic_agent_dl_executor == "host"
+
+    - name: "Download binary by localhost"
+      ansible.builtin.get_url:
+        url: "{{ elastic_agent_dl_url }}"
+        dest: "{{ elastic_agent_temp_dir }}/{{ elastic_agent_pkg_name }}"
+        timeout: 60
+        mode: "0644"
+      delegate_to: localhost
+      become: false
+      when:
+        - elastic_agent_install_origin == "internet"
+        - elastic_agent_dl_executor == "localhost"
+
+    - name: "Copy local binary"
+      ansible.builtin.copy:
+        src: "{{ elastic_agent_temp_dir }}/{{ elastic_agent_pkg_name }}"
+        dest: "{{ elastic_agent_temp_dir }}/{{ elastic_agent_pkg_name }}"
+        mode: "0755"
+      when:
+        - elastic_agent_install_origin == "internet"
+        - elastic_agent_dl_executor == "localhost"
+
+    - name: "Uninstall tasks if binary exist"
+      ansible.builtin.include_tasks: uninstall.yml
+      when: __installed_bin.stat.exists
+
+    - name: "Unarchive"
+      ansible.builtin.unarchive:
+        src: "{{ elastic_agent_temp_dir }}/{{ elastic_agent_pkg_name }}"
+        dest: "{{ elastic_agent_temp_dir }}/{{ role_path | basename }}"
+        extra_opts: [--strip-components=1]
+        remote_src: true
+        owner: "{{ elastic_agent_user }}"
+        group: "{{ elastic_agent_group }}"
+
+    - name: "Install Elastic Agent"
+      become: true
+      ansible.builtin.shell: |
+        set -o pipefail
+        ./elastic-agent install --non-interactive {{ elastic_agent_install_flags }}
+      args:
+        chdir: "{{ elastic_agent_temp_dir }}/{{ role_path | basename }}"
+        executable: /bin/bash
+      no_log: true
+      changed_when: false
+
+    - name: "Create dirs"
+      ansible.builtin.file:
+        path: "{{ item | safe | trim }}"
+        state: directory
+        owner: "{{ elastic_agent_user }}"
+        group: "{{ elastic_agent_group }}"
+        mode: "0755"
+      loop:
+        - "{{ elastic_agent_config_path }}/inputs.d"
+
+    - name: "Set permissions on elastic-agent.service"
+      ansible.builtin.file:
+        path: /etc/systemd/system/elastic-agent.service
+        owner: root
+        group: root
+        mode: '0644'

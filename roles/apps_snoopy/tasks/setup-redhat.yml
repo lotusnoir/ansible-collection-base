@@ -1,0 +1,13 @@
+---
+- name: "REDHAT | Create repo file"
+  ansible.builtin.copy:
+    dest: "/etc/yum.repos.d/snoopy.repo"
+    mode: '0644'
+    content: |
+      [snoopy]
+      name = snoopy
+      baseurl = https://a2o.github.io/snoopy-packages/repo/centos/{{ ansible_facts.distribution_major_version }}/stable/
+      gpgcheck=1
+      gpgkey={{ snoopy_repository_key }}
+      repo_gpgcheck=1
+      enabled=1

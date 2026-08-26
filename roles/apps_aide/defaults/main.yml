@@ -1,0 +1,23 @@
+---
+### Install
+aide_install_method: repo  # or src (must be compiled)
+aide_install_force: false
+aide_install_dir: "{% if aide_install_method == 'src' %}/usr/local/bin{% else %}/usr/bin{% endif %}"
+
+### SRC Install
+aide_install_origin: internet  # or local
+aide_dl_executor: host  # or localhost
+aide_version: "0.19.1"
+aide_pkg_name: "aide-{{ aide_version }}.tar.gz"
+aide_dl_url: "https://github.com/aide/aide/releases/download/v{{ aide_version }}/{{ aide_pkg_name }}"
+aide_temp_dir: /tmp
+
+# if aide_install_origin: local
+aide_local_files: "~/Downloads/shared-files/{{ role_path | basename }}/{{ aide_pkg_name }}"
+
+### Config
+aide_db_path: "/var/lib/aide"
+aide_log_path: "/var/log/aide"
+aide_config_path: "/etc/aide"
+aide_gzip_dbout: "yes"
+aide_log_level: "warning"

@@ -1,0 +1,10 @@
+---
+aide_compile_pkg:
+  - gcc
+  - make
+  - bison
+  - flex
+  - zlib-devel
+  - pcre2-devel
+  - libgcrypt-devel
+  - e2fsprogs-devel

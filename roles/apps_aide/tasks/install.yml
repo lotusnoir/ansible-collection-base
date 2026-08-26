@@ -1,0 +1,32 @@
+---
+- name: "Check for binary"
+  ansible.builtin.stat:
+    path: "{{ aide_install_dir }}/aide"
+  changed_when: false
+  register: __installed_bin
+
+- name: "Repo install tasks"
+  ansible.builtin.include_tasks: install_repo.yml
+  when: aide_install_method == "repo"
+
+- name: "Sources install tasks"
+  ansible.builtin.include_tasks: install_src.yml
+  when: aide_install_method == "src"
+
+- name: "Configure aide.conf"
+  ansible.builtin.template:
+    src: "aide.conf.j2"
+    dest: "{{ aide_config_path }}/aide.conf"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+    # validate: "{{ aide_install_dir }}/aide --config-check --config %s"
+
+- name: "Ensure database already initialized"
+  ansible.builtin.stat:
+    path: "{{ aide_db_path }}/aide.db"
+  register: __aide_db
+  changed_when: "not __aide_db.stat.exists"
+  notify:
+    - "Initialize aide database"
+    - "Move new aide database into place"

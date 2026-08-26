@@ -1,0 +1,22 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+  gather_facts: false
+
+  pre_tasks:
+    - name: Get minimal facts
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - distribution
+
+  vars:
+    autologin_users:
+      - {name: johnd, key: "ssh-ed25519 AAAAC3NzaC1asdad8sd7as0asfasf5as4fa7sfa0sf0-af8"}
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-system_autologin

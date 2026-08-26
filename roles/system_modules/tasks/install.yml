@@ -1,0 +1,53 @@
+---
+- name: "REDHAT - Install kmod package"
+  ansible.builtin.dnf:
+    name: kmod
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  when: ansible_facts.os_family in ["RedHat", "Rocky", "OracleLinux"]
+
+- name: "Configure modules to load at boot"
+  ansible.builtin.template:
+    src: modules.conf.j2
+    dest: "{{ _modules_load_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+  when: modules_load | length > 0
+
+- name: "Load modules now"
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ modules_load }}"
+  when: modules_load | length > 0
+
+- name: "Blacklisting modules"
+  ansible.builtin.template:
+    src: blacklist.conf.j2
+    dest: '{{ _modules_modprobe_dir }}/blacklist.conf'
+    owner: root
+    group: root
+    mode: '0644'
+  when: modules_blacklist | length > 0
+  notify: "Update initramfs"
+
+- name: "Unload blacklisted modules if loaded"
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: absent
+  loop: "{{ modules_blacklist }}"
+  failed_when: false
+  when: modules_blacklist | length > 0
+
+- name: "Create module options files"
+  ansible.builtin.template:
+    src: modules_options.conf.j2
+    dest: "{{ _modules_modprobe_dir }}/{{ item }}.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  with_items: "{{ modules_options }}"

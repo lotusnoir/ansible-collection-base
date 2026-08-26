@@ -1,0 +1,38 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    consul_agent_config: |
+      node_name       = "test_vm"
+      datacenter      = "mysite"
+      bind_addr       = "127.0.0.1"
+      advertise_addr  = "127.0.0.1"
+      client_addr     = "127.0.0.1"
+
+      data_dir = "/opt/consul"
+      leave_on_terminate = false
+      disable_update_check = true
+      log_json = true
+      log_level = "warn"
+      retry_join = ["10.1.1.1"]
+    consul_agent_config_d:
+      exporter:
+        services:
+          - name: node-exporter
+            port: 9100
+            tags:
+              - prometheus_exporter
+            checks:
+              - name: node-exporter-tcp
+                tcp: 127.0.0.1:9100
+                interval: 1s
+                timeout: 900ms
+                failures_before_critical: 3
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-apps_consul_agent

@@ -1,0 +1,76 @@
+---
+# - name: "Install requierements"
+#   ansible.builtin.package:
+#     name: "gnupg"
+#     state: present
+#   register: __pkg_result
+#   retries: 12
+#   delay: 10
+#   until: __pkg_result is success
+#
+# - name: "Add HSTR PPA repository"
+#   become: true
+#   apt_repository:
+#     repo: ppa:ultradvorka/ppa
+#     state: present
+
+- name: "Install hstr"
+  become: true
+  ansible.builtin.package:
+    name: hstr
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "Ensure hstr config block is in /etc/skel/.bashrc for future users"
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/skel/.bashrc
+    mode: "0644"
+    block: "{{ lookup('pipe', 'hstr --show-configuration') }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: hstr config"
+    create: true
+  when: hstr_enable_skel | bool
+
+- name: "Add hstr config to root"
+  become: true
+  become_user: root
+  ansible.builtin.blockinfile:
+    path: "/root/.bashrc"
+    mode: "0640"
+    block: "{{ lookup('pipe', 'hstr --show-configuration') }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: hstr config"
+    create: true
+  when: hstr_enable_user_root | bool
+
+- name: "Find existing user .bashrc files in /home"
+  ansible.builtin.find:
+    paths: /home
+    patterns: .bashrc
+    file_type: file
+  register: bashrc_files
+  when: hstr_enable_users_all | bool
+
+- name: "Add hstr config to existing users"
+  ansible.builtin.blockinfile:
+    path: "{{ item.path }}"
+    mode: "0640"
+    block: "{{ lookup('pipe', 'hstr --show-configuration') }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: hstr config"
+    create: true
+  loop: "{{ bashrc_files.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when: hstr_enable_users_all | bool
+
+- name: "Add hstr config to specified users"
+  ansible.builtin.blockinfile:
+    path: "/home/{{ item }}"
+    mode: "0640"
+    block: "{{ lookup('pipe', 'hstr --show-configuration') }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: hstr config"
+    create: true
+  loop: "{{ hstr_enable_users_list }}"
+  when: hstr_enable_users_list | bool

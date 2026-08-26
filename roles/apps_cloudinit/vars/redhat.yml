@@ -1,0 +1,6 @@
+---
+_package: cloud-init
+
+_clean_file:
+  - /etc/cloud/cloud.cfg.d/05_logging.cfg
+  - /etc/cloud/cloud.cfg.d/90_dpkg.cfg

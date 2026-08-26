@@ -1,0 +1,24 @@
+---
+### Install
+rsyslog_exporter_install_method: src
+rsyslog_exporter_install_origin: internet  # or local
+rsyslog_exporter_dl_executor: host  # or localhost
+rsyslog_exporter_install_force: false
+
+rsyslog_exporter_install_dir: "/usr/local/bin"
+rsyslog_exporter_bin_name: "rsyslog_exporter"
+
+rsyslog_exporter_version: "1.1.0"
+rsyslog_exporter_distrib: "Linux"
+rsyslog_exporter_arch: "x86_64"
+rsyslog_exporter_pkg_name: "rsyslog_exporter_{{ rsyslog_exporter_version }}_{{ rsyslog_exporter_distrib }}_{{ rsyslog_exporter_arch }}.tar.gz"
+rsyslog_exporter_dl_url: >
+  https://github.com/prometheus-community/rsyslog_exporter/releases/download/v{{ rsyslog_exporter_version }}/{{ rsyslog_exporter_pkg_name }}
+rsyslog_exporter_temp_dir: "/tmp"
+
+# if rsyslog_exporter_install_origin: local
+rsyslog_exporter_local_files: "~/Downloads/shared-files/{{ role_path | basename }}/{{ rsyslog_exporter_pkg_name }}"
+
+### Configuration
+rsyslog_exporter_web_port: 9105
+rsyslog_exporter_telemetry_path: "/metrics"

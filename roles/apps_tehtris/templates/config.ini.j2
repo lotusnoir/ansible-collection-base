@@ -1,0 +1,13 @@
+{{ ansible_managed | comment }}
+
+[server]
+SERVER={{ tehtris_server }}
+PROXY={{ tehtris_proxy }}
+
+[client]
+TAG={{ tehtris_tag }}
+VDI={{ tehtris_vdi }}
+REMOTE_EXECUTION={{ tehtris_remote_exec }}
+
+[debug]
+DEBUG_MODE={{ tehtris_debug_mode }}

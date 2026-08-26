@@ -1,0 +1,54 @@
+---
+- name: Create a directory
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode | default('0755') }}"
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default(item.owner | default('root')) }}"
+  loop: "{{ toolkit_create_dirs }}"
+
+- name: Clone a repo
+  become: true
+  become_user: "{{ item.owner | default('root') }}"
+  ansible.builtin.git:
+    repo: "{{ item.repo }}"
+    dest: "{{ item.dest }}"
+    separate_git_dir: "{{ item.separate_git_dir | default(omit) }}"
+    clone: "{{ item.clone | default(true) }}"
+    update: "{{ item.do_update | default(true) }}"
+    archive: "{{ item.archive | default(omit) }}"
+    version: "{{ item.version | default('HEAD') }}"
+  loop: "{{ toolkit_clone_repos }}"
+
+- name: Copy file to VM
+  become: true
+  become_user: "{{ item.owner | default('root') }}"
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default(item.owner | default('root')) }}"
+    mode: "{{ item.mode | default('0644') }}"
+  loop: "{{ toolkit_copy_files }}"
+
+- name: "Sync large directory"
+  become: true
+  become_user: "{{ item.owner | default('root') }}"
+  ansible.posix.synchronize:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    delete: "{{ item.delete | default(true) }}"
+    recursive: "{{ item.recursive | default(true) }}"
+  loop: "{{ toolkit_sync_dirs }}"
+
+- name: "Run commands"
+  become: true
+  become_user: "{{ item.owner | default('root') }}"
+  ansible.builtin.shell:
+    cmd: "{{ item.cmd }}"
+  args:
+    executable: "{{ item.executable | default('/bin/bash') }}"
+    chdir: "{{ item.chdir | default(omit) }}"
+  changed_when: false
+  loop: "{{ toolkit_run_commands }}"

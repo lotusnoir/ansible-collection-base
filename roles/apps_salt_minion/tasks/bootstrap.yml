@@ -1,0 +1,21 @@
+---
+- name: "Ensure salt wasnt installed by repo"
+  ansible.builtin.package:
+    name: "{{ salt_minion_pkg_name }}"
+    state: absent
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "BOOTSTRAP | Download last install script"
+  ansible.builtin.get_url:
+    url: "{{ salt_minion_bootstrap_url }}"
+    dest: "/tmp/bootstrap-salt.sh"
+    timeout: 120
+    mode: '0755'
+    force: true
+
+- name: "BOOTSTRAP | Run salt minion install script"
+  ansible.builtin.command: "/tmp/bootstrap-salt.sh stable {{ salt_minion_version }}"
+  changed_when: false

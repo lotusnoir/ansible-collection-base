@@ -1,0 +1,43 @@
+---
+- name: DEBIAN | Install requirements
+  become: true
+  ansible.builtin.package:
+    name:
+      - lvm2
+      - scsitools
+      - parted
+    update_cache: true
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: DEBIAN | install xfs tools
+  ansible.builtin.package:
+    name: xfsprogs
+    state: present
+  become: true
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  loop: "{{ lvm_groups | subelements('lvnames') }}"
+  when:
+    - item.1 is defined
+    - item.1 != 'None'
+    - item.1.filesystem is defined
+    - item.1.filesystem == "xfs"
+    - item.1.create is defined
+    - item.1.create|bool
+
+# Special taks for debian-11
+- name: DEBIAN-11 | Create a symbolic link
+  become: true
+  ansible.builtin.file:
+    src: /usr/bin/rescan-scsi-bus.sh
+    dest: /sbin/rescan-scsi-bus
+    owner: root
+    group: root
+    state: link
+  when: ansible_distribution_release == "bullseye"

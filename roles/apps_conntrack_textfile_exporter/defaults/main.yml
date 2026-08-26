@@ -1,0 +1,12 @@
+---
+conntrack_textfile_exporter_log_file: "/var/log/conntrack_textfile_exporter.log"
+conntrack_textfile_exporter_prometheus_file: "/var/lib/node_exporter/conntrack_textfile_exporter.prom"
+conntrack_textfile_exporter_textfile_prometheus: true
+
+### exclude results with grep -v, you need to set the rigth regex here
+conntrack_textfile_exporter_udp_exclude: ""
+conntrack_textfile_exporter_tcp_exclude: ""
+
+conntrack_textfile_exporter_reset_values: false
+# multiple sed cause edr alerts, so we can deactivate it
+conntrack_textfile_exporter_count_values: false

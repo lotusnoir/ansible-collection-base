@@ -1,0 +1,107 @@
+---
+sssd_purge_before_install: false
+sssd_unset_apparmor: false
+sssd_pam_devsec_config: false
+sssd_svc_start: true
+sssd_umask: "027"
+
+## Debian only
+sssd_create_homedir: true
+sssd_change_umask: false
+
+# disable socket if we prefer manage then inside sssd.conf
+sssd_svc_socket_disable: []
+  # - sssd-autofs.socket
+  # - sssd-nss.socket
+  # - sssd-pac.socket
+  # - sssd-pam.socket
+  # - sssd-ssh.socket
+  # - sssd-sudo.socket
+  # - sssd-pam-priv.socket
+
+sssd_svc_override: true
+sssd_svc_override_content: |
+  [Unit]
+  After=network-online.target
+  Wants=network-online.target
+  StartLimitIntervalSec=0
+
+  [Service]
+  RuntimeDirectory=sssd
+  RuntimeDirectoryMode=0755
+  Restart=always
+  RestartSec=5
+  TimeoutStartSec=90
+# sssd_nssswitch_config:
+#   passwd:     files sss
+#   shadow:     files sss
+#   group:      files sss
+#   sudoers:    files sss
+#   hosts:      files dns
+#   bootparams: nisplus [NOTFOUND=return] files
+#   neters:     files
+#   netmasks:   files
+#   networks:   files
+#   protocols:  files
+#   rpc:        files
+#   services:   files sss
+#   netgroup:   files sss
+#   publickey:  nisplus
+#   automount:  files
+#   aliases:    files nisplus
+
+### Configuration for all distrib
+# sssd_conf_ifp:
+# sssd_conf_sudo:
+# sssd_conf_autofs:
+# sssd_conf_pac:
+# sssd_conf_session_recording:
+# sssd_conf_domains:
+#   - name: ldap1
+#     content: |
+#       id_provider = ldap
+#       auth_provider = ldap
+#       access_provider = ldap
+#       cache_credentials = True
+#       entry_cache_timeout = 5400
+#       ldap_uri = ldap://10.1.2.3, ldap://10.1.2.4
+#       ldap_schema = rfc2307bis
+#       ldap_default_bind_dn = cn=app-pam-nss,ou=applications,ou=users,dc=test,dc=fr
+#       ldap_default_authtok = pam
+#       ldap_search_base = dc=test,dc=fr
+#       ldap_access_filter = memberOf=cn={{ ansible_hostname }},ou=roles,ou=pam-nss,ou=applications,dc=test,dc=fr
+#       ldap_sudo_search_base = ou=sudo,cn={{ ansible_hostname }},ou=roles,ou=pam-nss,ou=applications,dc=test,dc=fr
+#       ldap_id_use_start_tls = True
+#       ldap_tls_reqcert = never
+#   - name: ldap2
+#     content: |
+#       id_provider = ldap
+#       auth_provider = ldap
+#       access_provider = ldap
+#       cache_credentials = False
+#       entry_cache_timeout = 0
+#       ldap_uri = ldap://13.145.0.21
+#       ldap_schema = rfc2307bis
+#       ldap_default_bind_dn = cn=app-pam-nss,ou=applications,ou=users,dc=test,dc=fr
+#       ldap_default_authtok = pam
+#       ldap_search_base = dc=test,dc=fr
+#       ldap_access_filter = memberOf=cn={{ ansible_hostname }},ou=roles,ou=pam-nss,ou=applications,dc=test,dc=fr
+#       ldap_sudo_search_base = ou=sudo,cn={{ ansible_hostname }},ou=roles,ou=pam-nss,ou=applications,dc=test,dc=fr
+#       ldap_id_use_start_tls = True
+#       ldap_tls_reqcert = never
+# sssd_conf_sssd: |
+#   services = nss, pam, ssh, sudo, ifp
+#   config_file_version = 2
+#   domains = ldap1, ldap2
+#   timeout = 10
+#   debug_level = 1
+# sssd_conf_pam: |
+#   reconnection_retries = 3
+#   offline_credentials_expiration = 0
+#   offline_failed_login_attempts = 0
+#   offline_failed_login_delay = 5
+# sssd_conf_nss: |
+#   override_homedir = /home/%u
+#   fallback_homedir = /home/%u
+#   default_shell = /bin/bash
+#   homedir_substring = /home

@@ -1,0 +1,5 @@
+{{ ansible_managed | comment }}
+
+{% for m in modules_load | unique | sort %}
+{{ m }}
+{% endfor %}

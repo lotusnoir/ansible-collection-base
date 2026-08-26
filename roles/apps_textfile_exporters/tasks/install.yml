@@ -1,0 +1,101 @@
+---
+- name: "ROCKY | Enable codeready-builder repository"
+  ansible.builtin.dnf:
+    name: perl-IPC-Run
+    enablerepo: crb
+    state: present
+  when:
+    - ansible_facts.distribution == "Rocky"
+    - textfile_exporters_install_requirements
+  tags:
+    - deploy
+
+- name: "REDHAT | Enable codeready-builder repository"
+  ansible.builtin.copy:
+    dest: /etc/yum.repos.d/crb.repo
+    content: |
+      [centos-crb]
+      name=CentOS {{ansible_facts.distribution_major_version }} CRB - {{ ansible_facts.architecture }}
+      baseurl=https://mirror.stream.centos.org/{{ansible_facts.distribution_major_version }}-stream/CRB/{{ ansible_facts.architecture }}/os/
+      enabled=1
+      gpgcheck=1
+      gpgkey=https://www.centos.org/keys/RPM-GPG-KEY-CentOS-Official-SHA256
+    mode: '0644'
+  when:
+    - ansible_facts.distribution == "RedHat"
+    - textfile_exporters_install_requirements
+  tags:
+    - deploy
+
+- name: "ORACLELINUX | Enable codeready-builder repository"
+  ansible.builtin.dnf:
+    name: perl-IPC-Run
+    enablerepo: "ol{{ansible_facts.distribution_major_version }}_codeready_builder"
+    state: present
+  when:
+    - ansible_facts.distribution in ['OracleLinux']
+    - textfile_exporters_install_requirements
+  tags:
+    - deploy
+
+- name: "Install requirements"
+  ansible.builtin.package:
+    name: "{{ __textfile_exporters_requirements }}"
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  when: textfile_exporters_install_requirements
+  tags:
+    - deploy
+
+- name: "Create textfile scripts directory"
+  ansible.builtin.file:
+    path: "{{ textfile_exporters_install }}"
+    state: directory
+    mode: "0755"
+  tags:
+    - deploy
+
+- name: "Deploy scripts tasks"
+  ansible.builtin.include_tasks: deploy_scripts.yml
+  with_items:
+    - "{{ textfile_exporters_urls }}"
+  when: textfile_exporters_urls | length > 0
+  tags:
+    - deploy
+    - scripts
+
+- name: "Add custom lines in script"
+  ansible.builtin.blockinfile:
+    path: "{{ item.name }}"
+    marker: "{{ item.marker | default(['### ANSIBLE BLOCK']) }}"
+    insertafter: "{{ item.after }}"
+    block: |
+      {{ item.content }}
+  loop: "{{ textfile_exporters_content | default([]) }}"
+  when: textfile_exporters_content is defined and textfile_exporters_content | length > 0
+  tags:
+    - deploy
+    - scripts
+
+- name: "Install cron jobs"
+  ansible.builtin.cron:
+    cron_file: "{{ item.cron_file | d(omit) }}"
+    day: "{{ item.day | d(omit) }}"
+    hour: "{{ item.hour | d(omit) }}"
+    job: "{{ item.job }}"
+    minute: "{{ item.minute | d(omit) }}"
+    month: "{{ item.month | d(omit) }}"
+    name: "{{ item.name }}"
+    special_time: "{{ item.special_time | d(omit) }}"
+    state: present
+    user: "{{ item.user | d(omit) }}"
+    weekday: "{{ item.weekday | d(omit) }}"
+  loop: "{{ textfile_exporter_cron }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: textfile_exporter_cron | length > 0
+  tags:
+    - cron

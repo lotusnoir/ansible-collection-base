@@ -1,0 +1,25 @@
+{{ ansible_managed | comment }}
+
+[Unit]
+Description=Prometheus conntrack Exporter
+After=network-online.target
+StartLimitInterval=0
+
+[Service]
+Type=simple
+Restart=always
+ExecStart={{ conntrack_exporter_install_dir }}/conntrack_exporter \
+    --listen-port {{ conntrack_exporter_listen_port }} \
+    --bind-address {{ conntrack_exporter_bind_address }} \
+    --ignore-hosts {{ conntrack_exporter_ignore_hosts }} \
+{% if conntrack_exporter_log_event is sameas true %}    --log-events --log-events-format {{ conntrack_exporter_log_format }} \{% endif %}
+{% if conntrack_exporter_debug is sameas true %}        --debug \{% endif %}
+    --listen-path {{ conntrack_exporter_listen_path }}
+
+ExecReload=/bin/kill -HUP $MAINPID
+SyslogIdentifier=conntrack-exporter
+RestartSec=1
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

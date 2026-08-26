@@ -1,0 +1,31 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+  gather_facts: false
+
+  pre_tasks:
+    - name: Get minimal facts
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - distribution
+
+  vars:
+    apt_sources_debian_components: ["main", "contrib", "non-free"]
+    apt_sources_ubuntu_components: ["main", "multiverse"]
+    apt_sources_remove_release_change_alert: true
+    apt_sources_exclude_man: false
+    apt_sources_debian_repository_url: "{{ 'http://archive.debian.org' if ansible_facts.distribution_major_version | int == 10 else 'http://deb.debian.org' }}"
+    apt_sources_include_locales:
+      - fr
+      - en
+    apt_sources_disable_caches: true
+    apt_sources_compress_indexes: true
+    apt_sources_ignore_additional: true
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-system_apt_sources

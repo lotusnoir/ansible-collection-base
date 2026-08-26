@@ -1,0 +1,48 @@
+---
+# - name: "CLOUDINIT | Ensure disable_vmware_customization set to false"
+#   ansible.builtin.lineinfile:
+#     path: /etc/cloud/cloud.cfg
+#     insertafter: EOF
+#     line: 'disable_vmware_customization: false'
+#   when: cleanpacker_hypervisor == "vmware"
+#
+# - name: "CLOUDINIT | Add content on cloud-init config"
+#   ansible.builtin.copy:
+#     dest: "/etc/cloud/cloud.cfg.d/99-vmware-guest-customization.cfg"
+#     content: |
+#       datasource_list:
+#         VMware:
+#           vmware_cust_file_max_wait: 10
+#     mode: '0644'
+#   when: cleanpacker_hypervisor == "vmware"
+
+- name: "CLOUDINIT | Add content on cloud-init file"
+  ansible.builtin.copy:
+    dest: "/etc/cloud/cloud.cfg.d/90_dpkg.cfg"
+    content: |
+      datasource_list: [ VMware, NoCloud, ConfigDrive ]
+    mode: "0644"
+
+- name: "CLOUDINIT | Remove cloud-init file"
+  ansible.builtin.file:
+    path: /etc/cloud/cloud.cfg.d/subiquity-disable-cloudinit-networking.cfg
+    state: absent
+
+- name: "CLOUDINIT | Remove cloud-init file"
+  ansible.builtin.file:
+    path: /etc/cloud/cloud.cfg.d/99-installer.cfg
+    state: absent
+
+- name: "CLOUDINIT | Remove netplan install config"
+  ansible.builtin.file:
+    path: /etc/netplan/00-installer-config.yaml
+    state: absent
+
+- name: "CLOUDINIT | Remove netplan cloud-init file"
+  ansible.builtin.file:
+    path: /etc/netplan/50-cloud-init.yaml
+    state: absent
+
+- name: "CLOUDINIT | Cloud-init clean"
+  ansible.builtin.command: /usr/bin/cloud-init clean
+  changed_when: false

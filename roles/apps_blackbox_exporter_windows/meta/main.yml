@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  author: lotusnoir
+  role_name: apps_blackbox_exporter_windows
+  description: "Install blackbox exporter for windows"
+  license: "Apache License, Version 2.0"
+  min_ansible_version: "2.8"
+
+  platforms:
+    - name: "Windows"
+      versions:
+        - "2019"
+
+  galaxy_tags:
+    - blackbox
+    - exporter
+    - prometheus
+    - windows
+
+dependencies: []

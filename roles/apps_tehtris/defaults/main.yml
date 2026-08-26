@@ -1,0 +1,18 @@
+---
+### Install
+tehtris_version: 1.8.0
+tehtris_force_install: false
+tehtris_install_method: url
+tehtris_install_path: ""
+tehtris_install_url: ""
+tehtris_tmp_path: "/tmp"
+tehtris_user: root
+tehtris_group: root
+
+### Config
+tehtris_server: "10.1.1.1"
+tehtris_proxy: ""
+tehtris_tag: ""
+tehtris_vdi: ""
+tehtris_remote_exec: ""
+tehtris_debug_mode: "0"

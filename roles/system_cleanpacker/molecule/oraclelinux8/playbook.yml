@@ -1,0 +1,24 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    cleanpacker_truncate_logs: true
+    cleanpacker_rebuild_hostkeys: true
+    cleanpacker_delete_unusedlocales: true
+    cleanpacker_locales_keep: ["en", "fr"]
+
+  pre_tasks:
+    - name: Ensure openssh-client is installed
+      ansible.builtin.apt:
+        name: openssh-client
+        state: present
+      when: ansible_facts.os_family == 'Debian'
+      changed_when: false
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-system_cleanpacker

@@ -1,0 +1,17 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    textfile_exporter_cron:
+      - name: "Check if sssd is properly working every 5min"
+        job: umask 0022; /opt/prometheus_textfile_exporters/sssd_check.sh | sponge /var/lib/node_exporter/sssd_check.prom
+        minute: "*/5"
+        user: root
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-apps_textfile_exporters

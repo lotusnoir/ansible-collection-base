@@ -1,0 +1,32 @@
+---
+### Install
+chrony_exporter_install_method: src
+chrony_exporter_install_origin: internet  # or local
+chrony_exporter_dl_executor: host  # or localhost
+chrony_exporter_install_force: false
+chrony_exporter_start_service: true
+
+chrony_exporter_install_dir: "/usr/local/bin"
+chrony_exporter_bin_name: "chrony_exporter"
+chrony_exporter_arch: "amd64"
+chrony_exporter_group: "{% if ansible_facts.os_family == 'RedHat' %}chrony{% else %}_chrony{% endif %}"
+chrony_exporter_user: "{% if ansible_facts.os_family == 'RedHat' %}chrony{% else %}_chrony{% endif %}"
+
+chrony_exporter_version: "latest"
+chrony_exporter_distrib: "linux"
+chrony_exporter_pkg_name: "chrony_exporter-{{ chrony_exporter_version }}.{{ chrony_exporter_distrib }}-{{ chrony_exporter_arch }}.tar.gz"
+chrony_exporter_dl_url: "https://github.com/SuperQ/chrony_exporter/releases/download/v{{ chrony_exporter_version }}/{{ chrony_exporter_pkg_name }}"
+chrony_exporter_temp_dir: "/tmp"
+
+# if chrony_exporter_install_origin: local
+chrony_exporter_local_files: "~/Downloads/shared-files/{{ role_path | basename }}/{{ chrony_exporter_pkg_name }}"
+
+### Config
+chrony_exporter_chrony_address: "unix:///run/chrony/chronyd.sock"
+chrony_exporter_web_listen: "0.0.0.0"
+chrony_exporter_web_port: "9101"
+chrony_exporter_loglevel: "info"
+chrony_exporter_collector_sources: false
+chrony_exporter_collector_serverstats: false
+chrony_exporter_collector_tracking: true
+chrony_exporter_collector_dns_lookup: true

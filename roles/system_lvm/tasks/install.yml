@@ -1,0 +1,39 @@
+---
+- name: Set rescan_scsi_command for old debian version
+  ansible.builtin.set_fact:
+    rescan_scsi_command: "/sbin/rescan-scsi-bus"
+  when:
+    - ansible_facts.distribution | replace(' ','') | lower == 'debian'
+    - ansible_distribution_release not in ('bookworm', 'sid')
+    - ansible_facts.distribution_major_version is version(10, '<=')
+
+- name: Ensure rescan exist
+  ansible.builtin.stat:
+    path: "/sys/class/block/sdb/device"
+  changed_when: false
+  register: scsi_disk
+
+- name: Checking for scsi devices
+  ansible.builtin.shell: "echo '1' > /sys/class/block/sdb/device/rescan"
+  become: true
+  changed_when: false
+  when: scsi_disk.stat.exists
+
+- name: Resize of physical volumes
+  ansible.builtin.command: "pvresize /dev/sdb"
+  changed_when: false
+  failed_when: false
+
+- name: Debian tasks
+  ansible.builtin.include_tasks: debian.yml
+  when: ansible_facts.os_family == "Debian"
+
+- name: Redhat tasks
+  ansible.builtin.include_tasks: centos.yml
+  when: ansible_facts.os_family == "RedHat"
+
+- name: Manage tasks
+  ansible.builtin.include_tasks: manage_lvm.yml
+  when:
+    - lvm_groups is defined
+    - manage_lvm|bool

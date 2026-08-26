@@ -1,0 +1,73 @@
+---
+- name: Check if sshd and ssh-agent services are installed
+  ansible.windows.win_service:
+    name: '{{ item }}'
+  register: pri_openssh_service
+  changed_when: not pri_openssh_service.exists | bool  # we want to register a change for the step below
+  with_items:
+    - sshd
+    - ssh-agent
+
+- name: Install the sshd and ssh-agent service
+  ansible.windows.win_command: powershell.exe -ExecutionPolicy ByPass -File "{{ openssh_windows_install_path }}\install-sshd.ps1"
+  when: pri_openssh_service is changed
+
+- name: "Open for inbound SSH connections port {{ openssh_windows_port }}"
+  community.windows.win_firewall_rule:
+    name: Win32-OpenSSH inbound
+    state: present
+    enabled: true
+    action: allow
+    protocol: tcp
+    localport: '{{ openssh_windows_port }}'
+    direction: in
+    remoteip: '{{ openssh_windows_remoteip | default("any") }}'
+    profiles: '{{ openssh_windows_firewall_profiles }}'
+
+- name: Configure sshd_config file
+  ansible.builtin.include_tasks: sshd_config.yml
+
+- name: Setup user's authorized keys file
+  ansible.builtin.include_tasks: pubkeys.yml
+  when:
+    - not ansible_check_mode
+    - openssh_windows_pubkeys is defined
+
+- name: Set the default shell
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\OpenSSH
+    name: DefaultShell
+    state: present
+    type: string
+    data: '{{ openssh_windows_default_shell }}'
+  when: openssh_windows_default_shell is defined
+
+- name: Set the default shell command options
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\OpenSSH
+    name: DefaultShellCommandOption
+    state: present
+    type: string
+    data: '{{ openssh_windows_default_shell_command_option }}'
+  when: openssh_windows_default_shell_command_option is defined
+
+- name: Set the default shell escape arguments option
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\OpenSSH
+    name: DefaultShellEscapeArguments
+    state: present
+    type: dword
+    data: '{{ (openssh_windows_default_shell_escape_args | bool) | ternary(1, 0) }}'
+  when: openssh_windows_default_shell_escape_args is defined
+
+- name: Ensure sshd and ssh-agent service are set to start on boot
+  ansible.windows.win_service:
+    name: '{{ item }}'
+    start_mode: auto
+    state: started
+  when:
+    - not ansible_check_mode
+    - not openssh_windows_skip_start
+  with_items:
+    - sshd
+    - ssh-agent

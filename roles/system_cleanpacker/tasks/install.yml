@@ -1,0 +1,40 @@
+---
+- name: Import truncate_logs.yml
+  ansible.builtin.import_tasks: truncate_logs.yml
+  when: cleanpacker_truncate_logs | bool
+
+- name: Import rebuild_hostkeys.yml
+  ansible.builtin.import_tasks: rebuild_hostkeys.yml
+  when: cleanpacker_rebuild_hostkeys | bool
+
+- name: Import clean_cloudinit.yml
+  ansible.builtin.import_tasks: clean_cloudinit.yml
+  when: cleanpacker_clean_cloudinit | bool
+
+- name: Import disable_services.yml
+  ansible.builtin.import_tasks: disable_services.yml
+  when: cleanpacker_disable_services | bool
+
+- name: Import delete_unusedlocales.yml
+  ansible.builtin.import_tasks: delete_unusedlocales.yml
+  when: cleanpacker_delete_unusedlocales | bool
+
+- name: Import disable_dns_netmanager.yml
+  ansible.builtin.import_tasks: disable_dns_netmanager.yml
+  when: cleanpacker_disable_dns_netmanager | bool
+
+- name: Import clean_consul_node_id.yml
+  ansible.builtin.import_tasks: clean_consul_node_id.yml
+  when: cleanpacker_clean_consul_node_id | bool
+
+- name: Import clean_machine_id.yml
+  ansible.builtin.import_tasks: clean_machine_id.yml
+  when: cleanpacker_clean_machine_id | bool
+
+- name: Import clean_repo_hold.yml
+  ansible.builtin.import_tasks: clean_repo_hold.yml
+  when: cleanpacker_clean_repo_hold | bool
+
+- name: Import remove_rc_local.yml
+  ansible.builtin.import_tasks: remove_rc_local.yml
+  when: cleanpacker_remove_rc_local | bool

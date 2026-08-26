@@ -1,0 +1,24 @@
+---
+debug_exec: false
+
+ldap_entries_server_uri: ldap://10.1.2.3/
+ldap_entries_bind_dn: cn=terraform,ou=users,dc=test,dc=fr
+ldap_entries_bind_pw: Strongpassword!
+
+ldap_entries_dn_suffix: ou=apps,dc=test,dc=fr
+ldap_entries_start_tls: true
+ldap_entries_validate_certs: false
+
+ldap_entries_vm_name: "{{ inventory_hostname }}"
+ldap_entries_executor: localhost
+
+ldap_entries_fw: cn=firewall,dc=test,dc=fr
+
+ldap_entries_delete: false
+
+### List of users
+ldap_entries_users: "{{ ldap_entries_users_common | combine(ldap_entries_users_group | default({})) | combine(ldap_entries_users_host | default({})) }}"
+ldap_entries_users_common:
+  cn=titi.momo,ou=users,dc=test,dc=fr: tmo
+  cn=xi.tutu,ou=users,dc=test,dc=fr: xtu
+  cn=riri.lulu,ou=users,dc=test,dc=fr: rlu

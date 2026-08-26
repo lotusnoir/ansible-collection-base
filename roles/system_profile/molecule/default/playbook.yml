@@ -1,0 +1,20 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    profile_main: |
+          export test=ok
+    profile_config:
+      - file: proxy.sh
+        content: |
+          export http_proxy=http://squid.example.com:3128
+      - file: test.sh
+        state: absent
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-system_profile

@@ -1,0 +1,21 @@
+---
+### Install
+# remove resolvconf package
+resolv_resolvconf_remove: false
+# remove dns support by network manager
+resolv_networkmanager_disable_dns: false
+resolv_file: "/etc/resolv.conf"
+
+### Config
+resolv_nameservers: []
+#  - "127.0.0.1"
+#  - "10.0.0.1"
+#  - "10.0.0.2"
+resolv_domain: ""
+resolv_search: []
+#  - "example.com"
+resolv_sortlist: []
+resolv_options: []
+#  - "timeout:2"
+#  - "attempts:1"
+#  - "rotate"

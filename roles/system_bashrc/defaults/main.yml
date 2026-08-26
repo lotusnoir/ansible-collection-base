@@ -1,0 +1,33 @@
+---
+##########################
+### GLOBAL
+##########################
+### Configure for all new home created
+bashrc_configure_skel: false
+bashrc_skel_file: "/etc/skel/.bashrc"
+bashrc_skel_config: ""
+
+##########################
+### USERS
+##########################
+### Customize the bashrc for a list of user
+bashrc_users_configure: []
+#  - root
+#  - test
+
+### Specify specific home dirs for users
+bashrc_users_default_home: "/home"
+bashrc_users_home: {}
+#  root: "/root"
+#  test: "/home/server/test"
+
+### Specify extra config for each users
+bashrc_users_config: {}
+#  root:
+#    default: true # default value dont need to be specified
+#    config: |
+#      PS1="\[\e[0;37m\][\A]\[\e[0;m\]\[\e[0;31m\]\u\[\e[0;m\]\[\e[0;33m\]@\h\[\e[0;m\]:\[\e[1;36m\]\w\[\e[0;m\]\[\e[1;31m\]\\$\[\e[0;m\] "
+#  test:
+#    default: false
+#    config: |
+#      PS1="\[\e[0;37m\][\A]\[\e[0;m\]\[\e[0;32m\]\u\[\e[0;m\]\[\e[0;32m\]@\h\[\e[0;m\]:\[\e[1;36m\]\w\[\e[0;m\]\[\e[1;31m\]\\$\[\e[0;m\] "

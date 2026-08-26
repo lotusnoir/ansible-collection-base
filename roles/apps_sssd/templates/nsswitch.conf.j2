@@ -1,0 +1,5 @@
+{{ ansible_managed | comment }}
+
+{% for k,v in sssd_nssswitch_config.items() %}
+{{ k }}: {{ v }}
+{% endfor %}

@@ -1,0 +1,4 @@
+---
+- name: Update updatedb
+  ansible.builtin.command: updatedb
+  changed_when: false

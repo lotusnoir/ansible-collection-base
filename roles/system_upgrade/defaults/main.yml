@@ -1,0 +1,23 @@
+---
+# Just print packages to update
+upgrade_simulation: true
+
+# Prompt a confirmation before updating
+upgrade_pkgs_confirmation: false
+
+# Prompt a confirmation before rebooting
+upgrade_reboot_confirmation: false
+
+# Do the reboot
+upgrade_autoreboot: false
+
+# Debian Clean
+upgrade_clean: false
+
+# debian only
+# List of packages to not update
+upgrade_hold_pkg: []
+# package to stop to protect
+upgrade_unhold_pkg: []
+
+upgrade_yum_max_kernels: 2

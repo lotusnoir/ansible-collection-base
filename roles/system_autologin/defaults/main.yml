@@ -1,0 +1,5 @@
+---
+autologin_config_ssh: true
+autologin_config_sudo: true
+# autologin_users:
+#  - {name: username, key: "ssh-ed25519 AAAAC3NzaC1asdad8sd7as0asfasf5as4fa7sfa0sf0-af8"}

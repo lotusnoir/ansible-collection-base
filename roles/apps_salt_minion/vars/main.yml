@@ -1,0 +1,5 @@
+---
+salt_minion_bootstrap_url: "https://github.com/saltstack/salt-bootstrap/releases/latest/download/bootstrap-salt.sh"
+salt_minion_exe: "/usr/bin/salt-minion"
+salt_minion_owner: "salt"
+salt_minion_group: "salt"

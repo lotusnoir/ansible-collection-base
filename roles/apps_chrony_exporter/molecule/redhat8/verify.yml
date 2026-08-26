@@ -1,0 +1,30 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  any_errors_fatal: true
+  tasks:
+    - name: "Verify tasks"
+      when: not (ansible_facts.os_family in ['RedHat', 'Rocky', 'OracleLinux'] and ansible_facts.distribution_major_version == '8')
+      block:
+
+        - name: Collect services as facts
+          ansible.builtin.service_facts:
+
+        - name: Check service is running
+          ansible.builtin.assert:
+            that:
+              - "ansible_facts.services['chrony_exporter.service'].state == 'running'"
+
+        - name: Collect ports as facts
+          community.general.listen_ports_facts:
+
+        - name: Check port is listening
+          ansible.builtin.assert:
+            that:
+              - "9101 in ansible_facts.tcp_listen | map(attribute='port')"
+
+        - name: Check urls code
+          ansible.builtin.uri:
+            url: http://localhost:9101/metrics
+            status_code: 200

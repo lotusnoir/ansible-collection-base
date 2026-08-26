@@ -1,0 +1,5 @@
+---
+- name: Remove legacy rc.local to avoid systemd generator warning
+  ansible.builtin.file:
+    path: /etc/rc.d/rc.local
+    state: absent

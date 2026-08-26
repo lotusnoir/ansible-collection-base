@@ -1,0 +1,7 @@
+---
+nfs_mount: []
+#  - nfs_folder: "/data/backup1"
+#    nfs_server: "10.1.1.1:/mnt/backup1"
+#  - nfs_folder: "/data/backup2"
+#    nfs_server: "ntx-nfs.example.net:/backup2"
+#    nfs_opts: "rw,sync,nfsvers=4"

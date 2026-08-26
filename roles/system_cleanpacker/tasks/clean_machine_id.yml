@@ -1,0 +1,19 @@
+---
+- name: Truncate /etc/machine-id
+  ansible.builtin.copy:
+    src: /dev/null
+    dest: /etc/machine-id
+    mode: "0644"
+
+- name: Remove /var/lib/dbus/machine-id
+  ansible.builtin.file:
+    path: /var/lib/dbus/machine-id
+    state: absent
+
+- name: Create a symbolic link for /var/lib/dbus/machine-id
+  ansible.builtin.file:
+    src: /var/lib/dbus/machine-id
+    dest: /etc/machine-id
+    owner: root
+    group: root
+    state: link

@@ -1,0 +1,84 @@
+---
+- name: "DEBIAN-11/12 | Install requirements"
+  ansible.builtin.package:
+    name: libc6-dev
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  when: ansible_facts.distribution == 'Debian' and ansible_facts.distribution_major_version >= '11'
+
+- name: "Download requirements"
+  ansible.builtin.package:
+    name: "{{ _snoopy_compile_pkg_install }}"
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "Unarchive source"
+  ansible.builtin.unarchive:
+    src: '{{ snoopy_url }}'
+    dest: '{{ snoopy_tmp_dir }}'
+    remote_src: true
+
+- name: "UBUNTU-26 | Fix Snoopy _XOPEN_SOURCE redefinition"
+  ansible.builtin.replace:
+    path: "{{ snoopy_tmp_dir }}/snoopy-2.5.2/src/snoopy.h"
+    regexp: '^#define\s+_XOPEN_SOURCE\s+700'
+    replace: |
+      #ifndef _XOPEN_SOURCE
+      #define _XOPEN_SOURCE 700
+      #endif
+  when:
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_major_version | int >= 26
+
+- name: "UBUNTU-26 | Fix Snoopy const strchr warning"
+  ansible.builtin.replace:
+    path: /tmp/snoopy-2.5.2/src/datasource/domain.c
+    regexp: |
+      hashPtr = strchr\(linePtr, '#'\);
+    replace: |
+      hashPtr = (char *)strchr(linePtr, '#');
+  when:
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_major_version | int >= 26
+
+- name: "Run configure..."
+  ansible.builtin.command: "./configure {{ snoopy_configure_options }}"
+  args:
+    chdir: '{{ snoopy_tmp_dir }}/{{ snoopy_build_dir }}'
+  changed_when: false
+
+- name: "Run make..."
+  community.general.make:
+    chdir: '{{ snoopy_tmp_dir }}/{{ snoopy_build_dir }}'
+
+- name: "Run make install..."
+  community.general.make:
+    chdir: '{{ snoopy_tmp_dir }}/{{ snoopy_build_dir }}'
+    target: install
+
+- name: "Create log file"
+  ansible.builtin.file:
+    path: /var/log/snoopy.log
+    state: touch
+    mode: '0644'
+
+- name: "Uninstall unnecessary requirements"
+  ansible.builtin.package:
+    name: "{{ _snoopy_compile_pkg_uninstall }}"
+    state: absent
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  when: snoopy_uninstall_pkg|bool
+
+- name: "Clean source files"
+  ansible.builtin.file:
+    path: "{{ snoopy_tmp_dir }}/{{ snoopy_build_dir }}"
+    state: absent

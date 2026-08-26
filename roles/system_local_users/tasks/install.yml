@@ -1,0 +1,12 @@
+---
+- name: "Ensure all groups exists"
+  ansible.builtin.include_tasks: add_group.yml
+  with_items:
+    - "{{ local_groups | default([]) }}"
+  when: local_groups is defined
+
+- name: "Ensure all users exists"
+  ansible.builtin.include_tasks: add_user.yml
+  with_items:
+    - "{{ local_users | default([]) }}"
+  when: local_users is defined

@@ -1,0 +1,6 @@
+---
+tehtris_tmp_path: "/tmp"
+tehtris_binary_file: "TEHTRIS_EDR_{{ tehtris_version }}_Linux_x86_64.run"
+tehtris_installer_options: "AGREE_EULA=1 SERVER={{ tehtris_server }} TAG={{ tehtris_tag }}"
+tehtris_service_name: "dasc"
+tehtris_config_path: "/opt/eGambit/das/"

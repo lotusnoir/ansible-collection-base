@@ -1,0 +1,9 @@
+---
+sssd_pkg:
+  - sssd
+  - sssd-ldap
+  - sssd-tools
+  - sssd-dbus
+  - libsss_sudo
+  - oddjob-mkhomedir
+  - authselect-compat

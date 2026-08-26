@@ -1,0 +1,60 @@
+---
+### Debian
+- name: "DEBIAN | Install repo"
+  when: ansible_facts.os_family == 'Debian'
+  block:
+    - name: "DEBIAN | Install gnupg"
+      ansible.builtin.package:
+        name: gnupg
+        state: present
+
+    - name: "Ensure key directory exist"
+      ansible.builtin.file:
+        path: "/etc/apt/keyrings"
+        state: directory
+        mode: "0755"
+
+    - name: "DEBIAN | Download gpg key"
+      ansible.builtin.get_url:
+        url: "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public"
+        dest: "/etc/apt/keyrings/salt-archive-2023.pgp"
+        mode: "0644"
+
+    - name: "DEBIAN | Create repo list"
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/salt-archive-2023.pgp arch=amd64] https://packages.broadcom.com/artifactory/saltproject-deb/ stable main"
+        state: present
+        filename: salt
+
+### Redhat
+- name: "REDHAT | Install repo"
+  when: ansible_facts.os_family == 'RedHat'
+  block:
+    - name: "REDHAT 10+ | Install requierements"
+      ansible.builtin.dnf:
+        name: ["gnupg2"]
+        state: present
+      become: true
+      register: __pkg_result
+      retries: 12
+      delay: 10
+      until: __pkg_result is success
+      when: (ansible_facts.distribution_major_version | int) >= 10
+
+    - name: "REDHAT | Add SaltStack repository"
+      ansible.builtin.yum_repository:
+        name: salt
+        description: SaltStack repo
+        baseurl: https://packages.broadcom.com/artifactory/saltproject-rpm/
+        gpgcheck: true
+        gpgkey: https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public
+        enabled: true
+
+- name: "REDHAT | Install minion"
+  ansible.builtin.package:
+    name: "{{ salt_minion_pkg_name }}"
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success

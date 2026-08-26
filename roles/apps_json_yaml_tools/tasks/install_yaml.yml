@@ -1,0 +1,84 @@
+---
+- name: "Check for binary"
+  ansible.builtin.stat:
+    path: "{{ yq_install_dir }}/yq"
+  changed_when: false
+  register: __installed_yq_bin
+
+- name: "Get current version"
+  ansible.builtin.shell: |
+    set -o pipefail
+    {{ yq_install_dir }}/yq --version | grep -oP 'version v\K[0-9.]+'
+  args:
+    executable: /bin/bash
+  changed_when: false
+  register: __installed_yq_version
+  when: __installed_yq_bin.stat.exists
+
+- name: "Get latest tag"
+  ansible.builtin.uri:
+    url: "{{ _yq_release_api_url }}"
+  failed_when: false
+  register: __github_latest
+  when:
+    - yq_version == 'latest'
+    - yq_install_origin == "internet"
+
+- name: "Replace version fact to latest"
+  ansible.builtin.set_fact:
+    yq_version: "{{ __github_latest.json.tag_name | default(_yq_default_version) | replace('v', '') }}"
+  when:
+    - yq_version == 'latest'
+    - yq_install_origin == "internet"
+
+- name: "Install tasks"
+  when: (not __installed_yq_bin.stat.exists) or (__installed_yq_version is defined and yq_version not in __installed_yq_version.stdout) or yq_install_force
+  block:
+    - name: "Copy local binary"
+      ansible.builtin.copy:
+        src: "{{ yq_local_files }}"
+        dest: "{{ yq_temp_dir }}/{{ yq_pkg_name }}"
+        mode: "0755"
+        force: true
+      when: yq_install_origin == "local"
+
+    - name: "Download binary by host"
+      ansible.builtin.get_url:
+        url: "{{ yq_dl_url }}"
+        dest: "{{ yq_temp_dir }}/{{ yq_pkg_name }}"
+        timeout: 60
+        mode: "0644"
+        force: true
+      when:
+        - yq_install_origin == "internet"
+        - yq_dl_executor == "host"
+
+    - name: "Download binary by localhost"
+      ansible.builtin.get_url:
+        url: "{{ yq_dl_url }}"
+        dest: "{{ yq_temp_dir }}/{{ yq_pkg_name }}"
+        timeout: 60
+        mode: "0644"
+        force: true
+      delegate_to: localhost
+      when:
+        - yq_install_origin == "internet"
+        - yq_dl_executor == "localhost"
+
+    - name: "Copy local binary"
+      ansible.builtin.copy:
+        src: "{{ yq_temp_dir }}/{{ yq_pkg_name }}"
+        dest: "{{ yq_temp_dir }}/{{ yq_pkg_name }}"
+        mode: "0755"
+        force: true
+      when:
+        - yq_install_origin == "internet"
+        - yq_dl_executor == "localhost"
+
+    - name: "Install binary"
+      ansible.builtin.copy:
+        src: "{{ yq_temp_dir }}/{{ yq_pkg_name }}"
+        dest: "{{ yq_install_dir }}/yq"
+        remote_src: true
+        mode: "0755"
+        force: true

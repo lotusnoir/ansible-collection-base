@@ -1,0 +1,30 @@
+---
+grub_default_path: "/etc/default/grub"
+# grub_options:
+#   - name: GRUB_TIMEOUT
+#     value: 2
+#   - name: GRUB_RECORDFAIL_TIMEOUT
+#     value: 2
+
+## Add an extra argument on commandline
+# grub_add_cmdline: []
+#    - option: cgroup_enable
+#      value: memory
+
+## Add or edit /etc/grub.d/ files
+# grub_add_filed:
+#   #When no regex, add content to file or create a new file is not exist
+#   - file: 01_passwd
+#     value: |
+#       set superusers='root' password_pbkdf2 root grub.pbkdf2.sha512.10000.7C6DC0B6EA14D77D91C26[...]
+#   #When regex is present, file must exist
+#   - file: 10_linux
+#     regex: 'CLASS="--class gnu-linux --class gnu --class os"'
+#     value: 'CLASS="--class gnu-linux --class gnu --class os --unrestricted"'
+
+## Change mode to 600 for /boot/grub/grub.cfg
+grub_sec_bootloader: false
+grub_boot_path: "/boot/grub/grub.cfg"
+
+# Reboot after updating grub
+grub_reboot: false

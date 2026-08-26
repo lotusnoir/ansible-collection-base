@@ -1,0 +1,97 @@
+---
+# Hold specific package
+- name: "REDHAT | Install required package to hold packages"
+  ansible.builtin.dnf:
+    name: "{{ required_package }}"
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "REDHAT | List actual hold packages"
+  ansible.builtin.command: yum versionlock list
+  register: _upgrade_hold_pkg_actual
+  changed_when: false
+
+- name: "REDHAT | List hold pkgs not holded yet"
+  ansible.builtin.set_fact:
+    pkg_to_hold: "{{ upgrade_hold_pkg | difference(_upgrade_hold_pkg_actual.stdout_lines) }}"
+  when:
+    - upgrade_hold_pkg is defined
+    - upgrade_hold_pkg | length > 0
+
+- name: "REDHAT | List unhold pkgs still holded"
+  ansible.builtin.set_fact:
+    pkg_to_unhold: "{{ upgrade_unhold_pkg | intersect(_upgrade_hold_pkg_actual.stdout_lines) }}"
+  when:
+    - upgrade_unhold_pkg is defined
+    - upgrade_unhold_pkg | length > 0
+
+- name: "REDHAT | Holding packages"
+  ansible.builtin.command: "yum versionlock {{ pkg_to_hold | join('* ') }}"
+  changed_when: false
+  when:
+    - pkg_to_hold is defined
+    - pkg_to_hold | length > 0
+
+- name: "REDHAT | UNhold packages to update them"
+  ansible.builtin.command: "yum versionlock delete {{ pkg_to_unhold | join(' ') }}"
+  changed_when: false
+  when:
+    - pkg_to_unhold is defined
+    - pkg_to_unhold | length > 0
+
+- name: "REDHAT | Max kernels to keep"
+  ansible.builtin.lineinfile:
+    path: /etc/yum.conf
+    regexp: "^installonly_limit="
+    line: "installonly_limit={{ upgrade_yum_max_kernels }}"
+
+- name: "REDHAT | Collect upgradable packages"
+  ansible.builtin.command: yum check-update
+  register: pkglist
+  changed_when: false
+  failed_when: false
+
+- name: "REDHAT | Show pending updates"
+  ansible.builtin.debug:
+    var: pkglist.stdout_lines
+  changed_when: false
+
+- name: "REDHAT | Upgrade all packages"
+  ansible.builtin.dnf:
+    name: "*"
+    # use_backend: "{% if ansible_facts.distribution_major_version == '9' %}yum{% else %}auto{% endif %}"
+    state: latest
+    nobest: true
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  when: not upgrade_simulation|bool
+
+- name: "REDHAT | Remove packages relationship"
+  ansible.builtin.shell: yum remove -y `package-cleanup --leaves`
+  with_sequence: count=3
+  changed_when: false
+  when:
+    - upgrade_clean is defined
+    - upgrade_clean|bool
+
+- name: "REDHAT | Packages clean all"
+  ansible.builtin.shell: yum clean all && rm -rf /var/cache/yum
+  changed_when: false
+  when:
+    - upgrade_clean is defined
+    - upgrade_clean|bool
+# yum install yum-utils
+# package-cleanup --oldkernels --count=2
+# dnf -y remove --oldinstallonly --setopt installonly_limit=2 kernel
+
+# - name: "Autoremove unneeded packages installed as dependencies"
+#   ansible.builtin.yum:
+#     autoremove: "yes"
+#   when:
+#     - upgrade_clean is defined
+#     - upgrade_clean|bool

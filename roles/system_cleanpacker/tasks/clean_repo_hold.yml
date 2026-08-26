@@ -1,0 +1,22 @@
+---
+- name: "REDHAT | Clear all yum version locks"
+  ansible.builtin.command:
+    cmd: yum versionlock clear
+  changed_when: false
+  when: ansible_facts.os_family == "RedHat"
+  tags: ['skip_ansible_lint']
+
+- name: "DEBIAN | Get list of held APT packages"
+  ansible.builtin.command:
+    cmd: apt-mark showhold
+  register: apt_holds
+  changed_when: false
+  when: ansible_facts.os_family == "Debian"
+
+- name: "DEBIAN | Clear all APT package holds"
+  ansible.builtin.command:
+    cmd: apt-mark unhold {{ apt_holds.stdout_lines | join(' ') }}
+  changed_when: false
+  when:
+    - ansible_facts.os_family == "Debian"
+    - apt_holds.stdout_lines | length > 0

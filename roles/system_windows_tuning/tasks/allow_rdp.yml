@@ -1,0 +1,15 @@
+---
+- name: Install Remote-Desktop-Services
+  win_feature:
+    name: Remote-Desktop-Services
+    state: present
+    include_management_tools: "yes"
+
+- name: Ensure RDP Protocol is allowed in Firewall
+  community.windows.win_firewall_rule:
+    name: 'Remote Desktop'
+    direction: in
+    action: allow
+    protocol: tcp
+    localport: 3389
+    state: present

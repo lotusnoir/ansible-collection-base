@@ -1,0 +1,14 @@
+---
+cleanpacker_truncate_logs: false
+cleanpacker_rebuild_hostkeys: false
+cleanpacker_clean_cloudinit: false
+# cleanpacker_clean_cloudinit: "{% if ansible_facts.distribution == 'Ubuntu' %}true{% else %}false{% endif %}"
+cleanpacker_disable_services: false
+cleanpacker_delete_unusedlocales: false
+cleanpacker_disable_dns_netmanager: false
+cleanpacker_clean_consul_node_id: false
+cleanpacker_locales_keep: ["en", "fr", "sk"]
+cleanpacker_hypervisor: "vmware"
+cleanpacker_clean_machine_id: "false"
+cleanpacker_clean_repo_hold: "false"
+cleanpacker_remove_rc_local: "false"

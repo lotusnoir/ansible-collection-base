@@ -1,0 +1,17 @@
+---
+- name: "Check for binary"
+  ansible.builtin.stat:
+    path: "{{ rsyslog_exporter_install_dir }}/{{ rsyslog_exporter_bin_name }}"
+  changed_when: false
+  register: __installed_bin
+
+- name: "Sources install tasks"
+  ansible.builtin.include_tasks: install_src.yml
+  when: rsyslog_exporter_install_method == "src"
+
+- name: "Create stats configuration for rsyslog"
+  ansible.builtin.template:
+    src: stats.conf.j2
+    dest: /etc/rsyslog.d/stats.conf
+    mode: '0644'
+  notify: "Restart rsyslog"

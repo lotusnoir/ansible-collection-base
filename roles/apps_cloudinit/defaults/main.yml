@@ -1,0 +1,62 @@
+---
+cloudinit_manage_cfg: false
+
+cloudinit_disableroot: true
+cloudinit_preservehostname: false
+cloudinit_aptpreservesourceslist: true
+
+cloudinit_ssh_deletekeys: true
+cloudinit_ssh_genkeytypes: ['rsa', 'ecdsa', 'ed25519']
+cloudinit_syslog_fix_perms: '~'
+cloudinit_disable_vmware_customization: false
+
+cloudinit_datasource_list:
+  - None
+
+cloudinit_extra: ""
+cloudinit_clean: true
+
+cloudinit_cloudinitmodules:
+  - migrator
+  - seed_random
+  - bootcmd
+  - write-files
+  - growpart
+  - resizefs
+  - disk_setup
+  - mounts
+  - set_hostname
+  - update_hostname
+  - update_etc_hosts
+  - ca-certs
+  - rsyslog
+  - users-groups
+  - ssh
+
+cloudinit_cloudconfigmodules:
+  - emit_upstart
+  - ssh-import-id
+  - locale
+  - set-passwords
+  - grub-dpkg
+  - apt-pipelining
+  - apt-configure
+  - ntp
+  - timezone
+  - disable-ec2-metadata
+  - runcmd
+
+cloudinit_cloudfinalmodules:
+  - package-update-upgrade-install
+  - mcollective
+  - rightscale_userdata
+  - scripts-vendor
+  - scripts-per-once
+  - scripts-per-boot
+  - scripts-per-instance
+  - scripts-user
+  - ssh-authkey-fingerprints
+  - keys-to-console
+  - phone-home
+  - final-message
+  - power-state-change

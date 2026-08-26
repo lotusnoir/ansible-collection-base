@@ -1,0 +1,118 @@
+---
+# - name: "Get current version"
+#   ansible.builtin.shell: |
+#     set -o pipefail
+#     {{ rsyslog_exporter_install_dir }}/{{ rsyslog_exporter_bin_name }} --version 2>&1 | grep -oP 'version \K[0-9.]+' | head -1
+#   args:
+#     executable: /bin/bash
+#   changed_when: false
+#   register: __installed_version
+#   when: __installed_bin.stat.exists
+#
+# - name: "Get latest tag"
+#   ansible.builtin.uri:
+#     url: "{{ _rsyslog_exporter_release_api_url }}"
+#   failed_when: false
+#   register: __github_latest
+#   when:
+#     - rsyslog_exporter_version == 'latest'
+#     - rsyslog_exporter_install_origin == "internet"
+#
+# - name: "Replace version fact to latest"
+#   ansible.builtin.set_fact:
+#     rsyslog_exporter_version: "{{ __github_latest.json.tag_name | default(_rsyslog_exporter_default_version) | replace('v', '') }}"
+#   when:
+#     - rsyslog_exporter_version == 'latest'
+#     - rsyslog_exporter_install_origin == "internet"
+
+- name: "Install tasks"
+  # when:
+  #  - not __installed_bin.stat.exists
+  #  - __installed_version is not defined
+  #    or rsyslog_exporter_version not in __installed_version.stdout
+  #    or rsyslog_exporter_install_force
+  when: (not __installed_bin.stat.exists) or rsyslog_exporter_install_force
+  block:
+    - name: "Create dirs"
+      ansible.builtin.file:
+        path: "{{ item | safe | trim }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      loop:
+        - /etc/rsyslog.d/
+        - "{{ rsyslog_exporter_temp_dir }}/{{ role_path | basename }}"
+
+    - name: "Install requierements"
+      ansible.builtin.package:
+        name: ["tar"]
+        state: present
+      become: true
+      register: __pkg_result
+      retries: 12
+      delay: 10
+      until: __pkg_result is success
+
+    - name: "Copy local binary"
+      ansible.builtin.copy:
+        src: "{{ rsyslog_exporter_local_files }}"
+        dest: "{{ rsyslog_exporter_temp_dir }}/{{ rsyslog_exporter_pkg_name }}"
+        mode: "0755"
+      when: rsyslog_exporter_install_origin == "local"
+
+    - name: "Download binary by host"
+      ansible.builtin.get_url:
+        url: "{{ rsyslog_exporter_dl_url }}"
+        dest: "{{ rsyslog_exporter_temp_dir }}/{{ rsyslog_exporter_pkg_name }}"
+        timeout: 60
+        mode: "0644"
+      register: __pkg_result
+      retries: 12
+      delay: 10
+      until: __pkg_result is success
+      when:
+        - rsyslog_exporter_install_origin == "internet"
+        - rsyslog_exporter_dl_executor == "host"
+
+    - name: "Download binary by localhost"
+      ansible.builtin.get_url:
+        url: "{{ rsyslog_exporter_dl_url }}"
+        dest: "{{ rsyslog_exporter_temp_dir }}/{{ rsyslog_exporter_pkg_name }}"
+        timeout: 60
+        mode: "0644"
+      register: __pkg_result
+      retries: 12
+      delay: 10
+      until: __pkg_result is success
+      delegate_to: localhost
+      when:
+        - rsyslog_exporter_install_origin == "internet"
+        - rsyslog_exporter_dl_executor == "localhost"
+
+    - name: "Copy local binary"
+      ansible.builtin.copy:
+        src: "{{ rsyslog_exporter_temp_dir }}/{{ rsyslog_exporter_pkg_name }}"
+        dest: "{{ rsyslog_exporter_temp_dir }}/{{ rsyslog_exporter_pkg_name }}"
+        mode: "0755"
+      when:
+        - rsyslog_exporter_install_origin == "internet"
+        - rsyslog_exporter_dl_executor == "localhost"
+
+    - name: "Unarchive"
+      ansible.builtin.unarchive:
+        src: "{{ rsyslog_exporter_temp_dir }}/{{ rsyslog_exporter_pkg_name }}"
+        dest: "{{ rsyslog_exporter_temp_dir }}/{{ role_path | basename }}"
+        remote_src: true
+        mode: "0644"
+
+    - name: "Install binary"
+      ansible.builtin.copy:
+        src: "{{ rsyslog_exporter_temp_dir }}/{{ role_path | basename }}/rsyslog_exporter"
+        dest: "{{ rsyslog_exporter_install_dir }}/{{ rsyslog_exporter_bin_name }}"
+        remote_src: true
+        mode: "0755"
+
+    - name: "Special auth for redhat distro"
+      ansible.builtin.include_tasks: "setup-{{ ansible_facts.os_family | lower }}.yml"
+      when: ansible_facts.os_family == "RedHat"

@@ -1,0 +1,5 @@
+---
+__textfile_exporters_requirements:
+  - cronie
+  - moreutils
+  - python3-prometheus_client

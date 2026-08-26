@@ -1,0 +1,16 @@
+---
+# paths
+consul_win_install_path: 'c:\\consul'
+consul_win_configd_path: "{{ consul_win_install_path }}\\consul.d"
+consul_win_bin_path: "{{ consul_win_install_path }}"
+
+# binary
+consul_win_version: "1.16.1"
+consul_win_pkg: "consul_{{ consul_win_version }}_windows_amd64.zip"
+consul_win_zip_url: "https://releases.hashicorp.com/consul/{{ consul_win_version }}/{{ consul_win_pkg }}"
+
+# Config file
+consul_win_client_configuration: ""
+
+# systemd
+consul_win_agent_systemd_args: ""

@@ -1,0 +1,28 @@
+---
+### Install
+consul_exporter_install_method: src
+consul_exporter_install_force: false
+consul_exporter_start_service: true
+
+consul_exporter_install_dir: "/usr/local/bin"
+consul_exporter_bin_name: "consul_exporter"
+consul_exporter_arch: "amd64"
+
+### SRC install
+consul_exporter_group: consul_exporter
+consul_exporter_user: consul_exporter
+consul_exporter_install_origin: internet  # or local
+consul_exporter_dl_executor: host  # or localhost
+
+consul_exporter_version: "0.13.0"  # or latest
+consul_exporter_distrib: "linux"
+consul_exporter_pkg_name: "consul_exporter-{{ consul_exporter_version }}.{{ consul_exporter_distrib }}-{{ consul_exporter_arch }}.tar.gz"
+consul_exporter_dl_url: "https://github.com/prometheus/consul_exporter/releases/download/v{{ consul_exporter_version }}/{{ consul_exporter_pkg_name }}"
+consul_exporter_temp_dir: "/tmp"
+
+# if consul_exporter_install_origin: local
+consul_exporter_local_files: "~/Downloads/shared-files/{{ role_path | basename }}/{{ consul_exporter_pkg_name }}"
+
+### Config
+consul_exporter_port: "9106"
+consul_exporter_flags: "--consul.agent-only"

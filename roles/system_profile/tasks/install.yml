@@ -1,0 +1,39 @@
+---
+- name: "Insert/Update /etc/profile"
+  ansible.builtin.blockinfile:
+    path: /etc/profile
+    block: "{{ profile_main }}"
+  when:
+    - profile_main is defined
+    - profile_main | length > 0
+
+- name: "Create file in profile.d"
+  ansible.builtin.template:
+    src: entry.j2
+    dest: "/etc/profile.d/{{ item.file }}"
+    mode: '0755'
+  with_items: "{{ profile_config }}"
+  when:
+    - profile_config is defined
+    - profile_config | length > 0
+    - (item.state is defined and item.state == 'present') or item.state is not defined
+
+- name: "Remove file from profile.d"
+  ansible.builtin.file:
+    path: "/etc/profile.d/{{ item.file }}"
+    state: absent
+  with_items: "{{ profile_config }}"
+  when:
+    - profile_config is defined
+    - profile_config | length > 0
+    - item.state is defined and item.state == 'absent'
+
+- name: "Add external profile files"
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/etc/profile.d/"
+    mode: '0755'
+  with_fileglob: "{{ profile_files }}"
+  when:
+    - profile_files is defined
+    - profile_files | length > 0

@@ -1,0 +1,106 @@
+---
+- name: "Check for binary"
+  ansible.builtin.stat:
+    path: "{{ vim_pathogen_dir }}"
+  changed_when: false
+  register: __installed_pathogen
+
+- name: "Install pathogen requierements"
+  ansible.builtin.package:
+    name: "{{ item }}"
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  loop: "{{ _vim_packages_pathogen }}"
+  when: not __installed_pathogen.stat.exists
+
+- name: "Create pathogen.vim file"
+  ansible.builtin.template:
+    src: pathogen.vim.j2
+    dest: /etc/vim/pathogen.vim
+    mode: '0644'
+    owner: root
+    group: root
+  when: vim_pathogen_install
+
+- name: "Create airline.vim file"
+  ansible.builtin.template:
+    src: airline.vim.j2
+    dest: /etc/vim/airline.vim
+    mode: '0644'
+    owner: root
+    group: root
+  when: vim_pathogen_install
+
+- name: "Ensure bundle directory exists"
+  ansible.builtin.file:
+    path: "{{ vim_pathogen_dir }}/bundle"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  when: vim_pathogen_install
+
+- name: "Deploying vim plugins from Git"
+  ansible.builtin.git:
+    dest: "{{ vim_pathogen_dir }}/bundle/{{ item.name }}"
+    repo: "{{ item.url }}"
+    clone: "yes"
+    update: "yes"
+    recursive: "no"
+  loop: "{{ _pathogen_plugins }}"
+  when:
+    - vim_pathogen_install
+    - item.enabled
+    - vim_default_pathogen_plugins_install
+
+- name: "Create individual plugin configuration file"
+  ansible.builtin.template:
+    src: "{{ item.name }}.vim.j2"
+    dest: /etc/vim/{{ item.name }}.vim
+    mode: '0644'
+    owner: root
+    group: root
+  loop: "{{ _pathogen_plugins }}"
+  when:
+    - vim_pathogen_install
+    - item.enabled
+    - vim_default_pathogen_plugins_install
+
+- name: "Deploying vim cumtom plugins from Git"
+  ansible.builtin.git:
+    dest: "{{ vim_pathogen_dir }}/bundle/{{ item.name }}"
+    repo: "{{ item.url }}"
+    clone: "yes"
+    update: "yes"
+    recursive: "no"
+  loop: "{{ vim_custom_pathogen_plugins }}"
+  when:
+    - vim_pathogen_install
+    - item.enabled
+    - vim_custom_pathogen_plugins | length > 0
+
+- name: "Create individual custom plugin configuration file"
+  ansible.builtin.template:
+    src: "{{ item.config_file }}"
+    dest: /etc/vim/{{ item.name }}.vim
+    mode: '0644'
+    owner: root
+    group: root
+  loop: "{{ vim_custom_pathogen_plugins }}"
+  when:
+    - vim_pathogen_install
+    - item.enabled
+    - item.config_file is defined
+    - vim_custom_pathogen_plugins | length > 0
+
+- name: "Ensure bundle tree readable"
+  ansible.builtin.file:
+    path: "/usr/share/vim/addons/bundle/"
+    mode: u=rwX,g=rX,o=rX
+    recurse: true
+  when:
+    - vim_pathogen_install
+    - vim_default_pathogen_plugins_install or vim_custom_pathogen_plugins | length > 0

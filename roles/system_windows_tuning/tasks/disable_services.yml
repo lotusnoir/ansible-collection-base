@@ -1,0 +1,22 @@
+---
+- name: "Disable Common services "
+  ansible.windows.win_service:
+    name: "{{ item }}"
+    start_mode: disabled
+    state: stopped
+  with_items: "{{ windows_tuning_common_svc }}"
+
+- name: "Determine if Core or Desktop Experience"
+  ansible.windows.win_reg_stat:
+    path: HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion
+    name: InstallationType
+  register: __os_version
+
+- name: "Disable Core experience services "
+  ansible.windows.win_service:
+    name: "{{ item }}"
+    start_mode: disabled
+    state: stopped
+  failed_when: false
+  with_items: "{{ windows_tuning_server_svc }}"
+  when: __os_version.value == "Server"

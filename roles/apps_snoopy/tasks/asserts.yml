@@ -1,0 +1,5 @@
+---
+- name: Install method is properly set
+  ansible.builtin.assert:
+    that:
+      - snoopy_install_mode == "repo" or snoopy_install_mode == "src"

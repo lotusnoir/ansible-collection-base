@@ -1,0 +1,15 @@
+[Unit]
+Description=Fluentbit
+Requires=network.target
+After=network.target
+
+[Service]
+Type=simple
+LimitNOFILE={{ fluentbit_nofile_limit }}
+SupplementaryGroups=adm
+UMask=0027
+ExecStart={{ fluentbit_install_dir }}/{{ fluentbit_bin_name }} -c {{ fluentbit_config_dir }}/fluent-bit.conf
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

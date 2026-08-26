@@ -1,0 +1,8 @@
+---
+- name: "Configure /etc/crontab"
+  ansible.builtin.include_tasks: crontab.yml
+  tags: crontab
+
+- name: "Configure cron jobs"
+  ansible.builtin.include_tasks: jobs.yml
+  tags: jobs

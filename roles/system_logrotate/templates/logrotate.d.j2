@@ -1,0 +1,15 @@
+{{ ansible_managed | comment }}
+
+{{ item.path }}
+{
+  {% if item.options is defined -%}
+  {% for option in item.options -%}
+  {{ option }}
+  {% endfor -%}
+  {% endif %}
+  {%- if item.postrotate is defined -%}
+  postrotate
+{{ item.postrotate | indent(8,true) }}
+  endscript
+  {% endif -%}
+}

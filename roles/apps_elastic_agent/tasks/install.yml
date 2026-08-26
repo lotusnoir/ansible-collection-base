@@ -1,0 +1,70 @@
+---
+- name: "Check for binary"
+  ansible.builtin.stat:
+    path: "/usr/bin/elastic-agent"
+  changed_when: false
+  register: __installed_bin
+
+- name: "Sources install tasks"
+  ansible.builtin.include_tasks: install_src.yml
+  when: elastic_agent_install_method == "src"
+
+- name: "Configuring"
+  ansible.builtin.template:
+    src: elastic-agent.yml.j2
+    dest: "{{ elastic_agent_config_path }}/elastic-agent.yml"
+    owner: "{{ elastic_agent_user }}"
+    group: "{{ elastic_agent_group }}"
+    mode: "0644"
+  notify: Restart elastic-agent
+  when: elastic_agent_config is defined and elastic_agent_config | length > 0
+
+- name: "Create inputs.d files"
+  ansible.builtin.template:
+    src: elastic_config_d.json.j2
+    dest: "{{ elastic_agent_config_path }}/inputs.d/{{ item.name }}.json"
+    owner: "{{ elastic_agent_user }}"
+    group: "{{ elastic_agent_group }}"
+    mode: "0644"
+  with_items: "{{ elastic_agent_config_d }}"
+  notify: Restart elastic-agent
+  when: elastic_agent_config_d is defined and elastic_agent_config_d | length > 0
+
+- name: "Clean up elastic agent files"
+  block:
+    - name: Check if files exist before deletion
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ elastic_agent_temp_dir }}/ansible-apps_elastic_agent"
+        - "{{ elastic_agent_temp_dir }}/{{ elastic_agent_pkg_name }}"
+      register: file_stats
+
+    - name: "Remove elastic agent directory if exists"
+      ansible.builtin.file:
+        path: "{{ elastic_agent_temp_dir }}/ansible-apps_elastic_agent"
+        state: absent
+      when: file_stats.results[0].stat.exists
+
+    - name: "Remove elastic agent tarball if exists"
+      ansible.builtin.file:
+        path: "{{ elastic_agent_temp_dir }}/{{ elastic_agent_pkg_name }}"
+        state: absent
+      when: file_stats.results[1].stat.exists
+
+- name: "Extra systemd conf"
+  when: elastic_agent_disable_swap is defined and elastic_agent_disable_swap | bool
+  block:
+    - name: "Ensure systemd override directory exists"
+      ansible.builtin.file:
+        path: /etc/systemd/system/elastic-agent.service.d
+        state: directory
+        mode: '0755'
+
+    - name: "Disable swap via systemd override"
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/elastic-agent.service.d/limits.conf
+        content: |
+          [Service]
+          MemorySwapMax=0
+        mode: '0644'

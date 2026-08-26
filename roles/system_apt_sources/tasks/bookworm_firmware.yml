@@ -1,0 +1,8 @@
+---
+- name: "DEBIAN-12 - Remove non-free firmware alert"
+  ansible.builtin.lineinfile:
+    path: /etc/apt/apt.conf.d/no-bookworm-firmware.conf
+    state: present
+    create: true
+    line: APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";
+    mode: '0644'

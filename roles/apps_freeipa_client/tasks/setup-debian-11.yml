@@ -1,0 +1,39 @@
+---
+- name: "DEBIAN11: Install FreeIPA required packages"
+  ansible.builtin.package:
+    name: "{{ freeipa_client_pkgs_required }}"
+    state: present
+    update_cache: "{{ omit if (ansible_pkg_mgr == 'dnf') else 'yes' }}"
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "DEBIAN11:  Ensure xz-utils is present"
+  ansible.builtin.package:
+    name: xz-utils
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "DEBIAN11: Copy freeipa deb files"
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /tmp
+    mode: '0644'
+  with_items:
+    - "{{ freeipa_client_deb_pkgs }}"
+
+- name: "DEBIAN11: Install deb packages from the internet"
+  ansible.builtin.apt:
+    deb: "/tmp/{{ item }}"
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  environment:
+    PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  with_items:
+    - "{{ freeipa_client_deb_pkgs }}"

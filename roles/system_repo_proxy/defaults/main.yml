@@ -1,0 +1,18 @@
+---
+## proxy settings
+repo_proxy_scheme: "http"
+repo_proxy_server: "squid.exemple.com"
+repo_proxy_port: "3128"
+repo_proxy_user: ""
+repo_proxy_password: ""
+
+## misc
+repo_proxy_configure: true
+repo_proxy_update_cache: false
+
+### Debian family
+## File to set proxy settings
+apt_proxy_file: "/etc/apt/apt.conf.d/01proxy"
+## Remove a specific file
+apt_proxy_remove: []
+#  - /etc/apt/apt.conf.d/99proxy

@@ -1,0 +1,7 @@
+---
+- name: "REDHAT | Add script on profile"
+  ansible.builtin.lineinfile:
+    path: /etc/profile
+    regexp: "^if [ $UID -gt 199 ]; then {{ __motd_config_path }}/{{ item.priority ~ '-' ~ item.name }}; fi"
+    line: if [ $UID -gt 199 ]; then {{ __motd_config_path }}/{{ item.priority ~ '-' ~ item.name }}; fi
+  with_items: "{{ motd_script_add_profile }}"

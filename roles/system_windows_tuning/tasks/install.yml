@@ -1,0 +1,40 @@
+---
+- name: Set proxy tasks
+  ansible.builtin.include_tasks: proxy.yml
+  when: windows_tuning_set_proxy
+
+- name: Customize tasks
+  ansible.builtin.include_tasks: customize.yml
+  when: windows_tuning_customize
+
+- name: Disable services tasks
+  ansible.builtin.include_tasks: disable_services.yml
+  when: windows_tuning_disable_services
+
+- name: Disable ipv6 tasks
+  ansible.builtin.include_tasks: disable_ipv6.yml
+  when: windows_tuning_disable_ipv6
+
+- name: Allow rdp tasks
+  ansible.builtin.include_tasks: allow_rdp.yml
+  when: windows_tuning_allow_rdp
+
+- name: Set timezone tasks
+  ansible.builtin.include_tasks: set_timezone.yml
+  when: windows_tuning_set_timezone
+
+- name: Ping rule tasks
+  ansible.builtin.include_tasks: add_ping_rule.yml
+  when: windows_tuning_add_ping_rule
+
+- name: Users rule tasks
+  ansible.builtin.include_tasks: add_users.yml
+  when: windows_tuning_add_users | default([]) | length > 0
+
+- name: Upgrade tasks
+  ansible.builtin.include_tasks: upgrade.yml
+  when: windows_tuning_system_upgrade
+
+- name: Cleanup tasks
+  ansible.builtin.include_tasks: cleanup.yml
+  when: windows_tuning_cleanup

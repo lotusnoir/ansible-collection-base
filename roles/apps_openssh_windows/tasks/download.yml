@@ -1,0 +1,83 @@
+---
+- name: Copy OpenSSH zip from {{ openssh_windows_zip_remote_src | ternary("local path", "Ansible controller") }}
+  ansible.windows.win_copy:
+    src: '{{ openssh_windows_zip_file }}'
+    dest: '{{ openssh_windows_temp_path }}\OpenSSH-Win.zip'
+    remote_src: '{{ openssh_windows_zip_remote_src }}'
+  when: openssh_windows_zip_file is defined
+  ignore_errors: '{{ ansible_check_mode }}'  # File may not exist when in check mode
+
+- name: "Install"
+  when:
+    - openssh_windows_url is not defined
+    - openssh_windows_zip_file is not defined
+  block:
+    - name: "Install"
+      when: openssh_windows_version == 'latest'
+      block:
+        - name: Get latest release version
+          ansible.windows.win_uri:
+            url: https://github.com/PowerShell/Win32-OpenSSH/releases/latest
+            follow_redirects: safe
+            method: HEAD
+          register: pri_openssh_latest_redirect
+
+        - name: Extract the latest version from the latest release url
+          ansible.builtin.set_fact:
+            openssh_windows_version: '{{ pri_openssh_latest_redirect.response_uri.split("/")[-1] }}'
+
+    - name: Build download link from latest version
+      ansible.builtin.set_fact:
+        openssh_windows_url: >-
+          https://github.com/PowerShell/Win32-OpenSSH/releases/download/{{ openssh_windows_version }}/OpenSSH-Win{{ openssh_windows_architecture }}.zip
+
+- name: Download the Win32-OpenSSH zip
+  ansible.windows.win_get_url:
+    url: '{{ openssh_windows_url }}'
+    dest: '{{ openssh_windows_temp_path }}\OpenSSH-Win.zip'
+  when: openssh_windows_zip_file is not defined
+
+- name: Create temp zip output folder
+  ansible.windows.win_file:
+    path: '{{ openssh_windows_temp_path }}\OpenSSH'
+    state: directory
+
+- name: Extract the Win32-OpenSSH zip to a temp folder
+  community.windows.win_unzip:
+    src: '{{ openssh_windows_temp_path }}\OpenSSH-Win.zip'
+    dest: '{{ openssh_windows_temp_path }}\OpenSSH'
+    delete_archive: true
+  when: not ansible_check_mode
+
+- name: Find parent folder that contains the sshd binary
+  ansible.windows.win_find:
+    paths: '{{ openssh_windows_temp_path }}\OpenSSH'
+    recurse: true
+    file_type: file
+    patterns:
+      - sshd.exe
+  register: pri_openssh_find_results
+  when: not ansible_check_mode
+
+- name: Assert that we found the sshd binary from the zip
+  ansible.builtin.assert:
+    that:
+      - pri_openssh_find_results.files|count == 1
+  when: not ansible_check_mode
+
+- name: Make sure the install directory exists
+  ansible.windows.win_file:
+    path: '{{ openssh_windows_install_path }}'
+    state: directory
+
+- name: Copy the binary contents to install directory
+  ansible.windows.win_copy:
+    src: '{{ pri_openssh_find_results.files[0].path | win_dirname }}\'
+    dest: '{{ openssh_windows_install_path }}'
+    remote_src: true
+  when: not ansible_check_mode
+
+- name: Delete temp zip output folder
+  ansible.windows.win_file:
+    path: '{{ openssh_windows_temp_path }}\OpenSSH'
+    state: absent

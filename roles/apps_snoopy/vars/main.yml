@@ -1,0 +1,17 @@
+---
+_snoopy_exec_path: '{% if snoopy_install_mode == "repo" %}/usr/sbin{% else %}/usr/local/sbin{% endif %}'
+_snoopy_cfg_file: "/etc/snoopy.ini"
+
+_snoopy_compile_pkg_install:
+  - gcc
+  - make
+  - procps
+  - socat
+  - gzip
+  - tar
+  - wget
+
+_snoopy_compile_pkg_uninstall:
+  - gcc
+  - make
+  - wget

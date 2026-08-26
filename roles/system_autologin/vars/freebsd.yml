@@ -1,0 +1,3 @@
+---
+autologin_home_path: "/home/users/server"
+autologin_group: wheel

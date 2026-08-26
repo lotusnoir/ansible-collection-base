@@ -1,0 +1,16 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    resolv_resolvconf_remove: true
+    resolv_file: /etc/resolv2.conf
+    resolv_nameservers:
+      - "127.0.0.1"
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-system_resolv

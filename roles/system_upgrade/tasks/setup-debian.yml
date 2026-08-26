@@ -1,0 +1,168 @@
+---
+- name: "DEBIAN | Force kill stuck APT processes"
+  ansible.builtin.shell: |
+    set -o pipefail
+    pgrep -a 'apt|dpkg' || true
+    pgrep -a 'apt|dpkg' >/tmp/apt_pids.txt || true
+    if [ -s /tmp/apt_pids.txt ]; then
+      echo "Killing stuck APT processes:"
+      cat /tmp/apt_pids.txt
+      pkill -9 -f 'apt|dpkg' || true
+    else
+      echo "No stuck APT processes found."
+    fi
+  args:
+    executable: /bin/bash
+  register: apt_kill
+  changed_when: "'Killing stuck APT processes' in apt_kill.stdout"
+  failed_when: false
+
+- name: "DEBIAN | apt-get update"
+  ansible.builtin.apt:
+    update-cache: true
+  changed_when: false
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "DEBIAN | Install required package to print results"
+  ansible.builtin.apt:
+    name: "{{ required_package }}"
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+# Hold specific package
+- name: "DEBIAN | list actual hold packages"
+  ansible.builtin.command: apt-mark showhold
+  register: _upgrade_hold_pkg_actual
+  changed_when: false
+
+- name: "DEBIAN | we list the hold pkgs not holded yet"
+  ansible.builtin.set_fact:
+    pkg_to_hold: "{{ upgrade_hold_pkg | difference(_upgrade_hold_pkg_actual.stdout_lines) }}"
+  when:
+    - upgrade_hold_pkg is defined
+    - upgrade_hold_pkg | length > 0
+
+- name: "DEBIAN | we list the unhold pkgs not holded yet"
+  ansible.builtin.set_fact:
+    pkg_to_unhold: "{{ upgrade_unhold_pkg | intersect(_upgrade_hold_pkg_actual.stdout_lines) }}"
+  when:
+    - upgrade_unhold_pkg is defined
+    - upgrade_unhold_pkg | length > 0
+
+- name: "DEBIAN | holding packages"
+  ansible.builtin.shell: |
+    set -o pipefail
+    apt-mark hold {{ pkg_to_hold | join(' ') }} >/dev/null 2>&1 || true
+  args:
+    executable: /bin/bash
+  changed_when: false
+  when:
+    - pkg_to_hold is defined
+    - pkg_to_hold | length > 0
+
+- name: "DEBIAN | UNhold packages to update them"
+  ansible.builtin.shell: |
+    set -o pipefail
+    apt-mark unhold {{ pkg_to_unhold | join(' ') }} >/dev/null 2>&1 || true
+  args:
+    executable: /bin/bash
+  changed_when: false
+  when:
+    - pkg_to_unhold is defined
+    - pkg_to_unhold | length > 0
+
+- name: "DEBIAN | get list of pending upgrades"
+  ansible.builtin.command: apt-get --simulate dist-upgrade
+  register: apt_simulate
+  changed_when: false
+
+- name: "DEBIAN | parse apt-get output to get list of changed packages"
+  ansible.builtin.set_fact:
+    updates: "{{ apt_simulate.stdout_lines | select('match', '^  ') | list | sort }}"
+  changed_when: false
+
+- name: "DEBIAN | apt-get collect upgradable packages"
+  ansible.builtin.shell: |
+    set -o pipefail
+    apt-get --just-print full-upgrade 2>&1 |
+      perl -ne 'if (/Inst\s([\w\-\d\.\~\:\+]+)\s\[([\w\-\d\.\~\:\+]+)\]\s\(([\w\-\d\.\~\:\+]+)\)? /i) {
+        print "PROGRAM=$1 INSTALLED=$2 AVAILABLE=$3\n"
+      }' | column -s ' ' -t
+  args:
+    executable: /bin/bash
+  register: apt_listonly
+  changed_when: false
+
+- name: "DEBIAN | show pending updates"
+  ansible.builtin.debug:
+    var: apt_listonly.stdout_lines
+  changed_when: false
+
+- name: "DEBIAN | Ask for upgrade"
+  ansible.builtin.pause:
+    prompt: "Do you want to update this files ?"
+  when: upgrade_pkgs_confirmation|bool
+
+# do the actual apt-get dist-upgrade, only on vms with pending updates
+- name: "DEBIAN | apt-get dist-upgrade"
+  ansible.builtin.apt:
+    upgrade: dist
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  when:
+    - apt_listonly.stdout_lines is defined and apt_listonly.stdout_lines | length > 0
+    - not upgrade_simulation|bool
+
+- name: "DEBIAN | apt-get autoremove"
+  ansible.builtin.command: apt-get -y autoremove
+  changed_when: false
+  when:
+    - upgrade_clean is defined
+    - upgrade_clean|bool
+
+# check if we need a reboot, only on vms that updated
+- name: "DEBIAN | check if reboot needed"
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: reboot_required_file
+  when:
+    - upgrade_autoreboot|bool
+
+- name: "DEBIAN | Prompt for rebooting"
+  ansible.builtin.pause:
+    prompt: "Press ENTER to reboot {{ ansible_host }} now, or Ctrl+C to abort."
+  when:
+    - upgrade_autoreboot|bool
+    - reboot_required_file.stat.exists
+    - upgrade_reboot_confirmation|bool
+
+- name: "DEBIAN | Rebooting machine"
+  ansible.builtin.shell: sleep 2 && shutdown -r now "Ansible updates triggered"
+  changed_when: false
+  failed_when: false
+  async: 1
+  poll: 0
+  when:
+    - upgrade_autoreboot|bool
+    - reboot_required_file.stat.exists
+
+- name: "DEBIAN | Waiting for the machine to come back"
+  become: false
+  ansible.builtin.wait_for:
+    host: "{{ ansible_host }}"
+    state: started
+    port: 22
+    delay: 30
+  delegate_to: localhost
+  when:
+    - upgrade_autoreboot|bool
+    - reboot_required_file.stat.exists
+    - upgrade_reboot_confirmation

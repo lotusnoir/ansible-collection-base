@@ -1,0 +1,13 @@
+---
+### Install
+vim_pathogen_install: false
+# vim_pathogen_install_origin: internet  # or local
+# vim_pathogen_plugins_local_files: "~/Downloads/shared-files/{{ role_path | basename }}/pathogen_plugins"
+
+vim_pathogen_dir: /usr/share/vim/addons
+vim_default_pathogen_plugins_install: false
+vim_custom_pathogen_plugins: []
+
+### Config
+vim_color: elflord
+vim_airline_theme: luna

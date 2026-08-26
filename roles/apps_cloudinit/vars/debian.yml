@@ -1,0 +1,7 @@
+---
+_package: cloud-init
+
+_clean_file:
+  - /etc/cloud/cloud.cfg.d/90_dpkg.cfg
+  - /etc/cloud/cloud.cfg.d/99-installer.cfg
+  - /etc/cloud/cloud.cfg.d/subiquity-disable-cloudinit-network.cfg

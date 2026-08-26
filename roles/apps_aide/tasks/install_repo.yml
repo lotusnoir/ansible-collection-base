@@ -1,0 +1,12 @@
+---
+- name: "Repo install tasks"
+  when: (not __installed_bin.stat.exists) or aide_install_force
+  block:
+    - name: "Install aide package"
+      ansible.builtin.package:
+        name: "aide"
+        state: "present"
+      register: __pkg_result
+      retries: 12
+      delay: 10
+      until: __pkg_result is success

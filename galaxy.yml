@@ -1,0 +1,23 @@
+namespace: lotusnoir
+name: base
+version: 1.0.0
+
+readme: README.md
+
+authors:
+  - Philippe Leal
+
+description: >
+  Ansible collection containing the base roles used by the infrastructure.
+
+license:
+  - GPL-2.0-or-later
+
+tags:
+  - infrastructure
+  - linux
+  - windows
+  - system
+  - base
+
+repository: https://gitlab.pleal.ovh/ansible-roles_base/ansible-collection-base

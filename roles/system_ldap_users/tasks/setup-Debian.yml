@@ -1,0 +1,10 @@
+---
+- name: DEBIAN | Ensure sudo package is installed
+  ansible.builtin.package:
+    name: sudo
+    state: present
+    update_cache: true
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success

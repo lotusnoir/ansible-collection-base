@@ -1,0 +1,30 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+
+  pre_tasks:
+    - name: "Build interface list"
+      ansible.builtin.set_fact:
+        int_list: "{{ ansible_interfaces | difference('lo') | list }}"
+
+    - name: "Set infos for single interface"
+      ansible.builtin.set_fact:
+        interfaces_ether_interfaces:
+          device: "{{ item }}"
+          bootproto: static
+          address: "{{ ansible_facts[item]['ipv4']['address'] | default(none) }}"
+          netmask: "{{ ansible_facts[item]['ipv4']['netmask'] | default(none) }}"
+          gateway: "{{ ansible_facts[item]['ipv4']['address'].split('.')[0:3] | join('.') }}.1"
+      with_items: "{{ int_list }}"
+      when: int_list | length == 1
+
+    - name: "DEBUG: Show interfaces infos"
+      ansible.builtin.debug:
+        msg: "{{ interfaces_ether_interfaces }}"
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-system_interfaces

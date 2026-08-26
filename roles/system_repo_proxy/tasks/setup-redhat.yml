@@ -1,0 +1,36 @@
+---
+- name: "REDHAT: Add proxy to /etc/yum.conf"
+  ansible.builtin.lineinfile:
+    dest: /etc/yum.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: "{{ item.state | default('present') }}"
+  with_items:
+    - {regexp: "^proxy", line: "proxy={{ repo_proxy_scheme }}://{{ repo_proxy_server }}:{{ repo_proxy_port }}"}
+  when:
+    - repo_proxy_scheme is defined and repo_proxy_scheme | length > 0
+    - repo_proxy_server is defined and repo_proxy_server | length > 0
+    - repo_proxy_port is defined and repo_proxy_port | length > 0
+
+- name: "REDHAT | Check if /etc/rhsm/rhsm.conf exist."
+  ansible.builtin.stat:
+    path: /etc/rhsm/rhsm.conf
+  register: _rhsm_conf
+
+- name: "REDHAT: Add proxy to /etc/rhsm/rhsm.conf"
+  ansible.builtin.lineinfile:
+    dest: /etc/rhsm/rhsm.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: "{{ item.state | default('present') }}"
+  with_items:
+    - {regexp: "^proxy_scheme =", line: "proxy_scheme ={{ repo_proxy_scheme }}"}
+    - {regexp: "^proxy_hostname =", line: "proxy_hostname ={{ repo_proxy_server }}"}
+    - {regexp: "^proxy_port=", line: "proxy_port ={{ repo_proxy_port }}"}
+    - {regexp: "^proxy_user =", line: "proxy_user ={{ repo_proxy_user | default('') }}"}
+    - {regexp: "^proxy_password =", line: "proxy_password ={{ repo_proxy_password | default('') }}"}
+  when:
+    - _rhsm_conf.stat.exists
+    - repo_proxy_scheme is defined and repo_proxy_scheme | length > 0
+    - repo_proxy_server is defined and repo_proxy_server | length > 0
+    - repo_proxy_port is defined and repo_proxy_port | length > 0

@@ -1,0 +1,126 @@
+---
+### Install
+consul_agent_install_method: src  # or repo
+consul_agent_install_force: false
+consul_agent_start_service: true
+
+consul_agent_install_dir: "/usr/bin"
+consul_agent_bin_name: "consul"
+consul_agent_arch: "amd64"
+consul_agent_data_dir: "/opt/consul"
+consul_agent_config_dir: "{{ consul_agent_data_dir }}/conf.d"
+
+### SRC install
+consul_agent_group: consul
+consul_agent_user: consul
+consul_agent_install_origin: internet  # or internet
+consul_agent_dl_executor: host  # or localhost
+consul_agent_version: "latest"  # or 2.0.2
+consul_agent_distrib: "linux"
+consul_agent_pkg_name: "consul_{{ consul_agent_version }}_{{ consul_agent_distrib }}_{{ consul_agent_arch }}.zip"
+consul_agent_dl_url: "https://releases.hashicorp.com/consul/{{ consul_agent_version }}/{{ consul_agent_pkg_name }}"
+consul_agent_temp_dir: "/tmp"
+
+# if consul_agent_install_origin: local
+consul_agent_local_files: "~/Downloads/shared-files/{{ role_path | basename }}/{{ consul_agent_pkg_name }}"
+
+# where is installed binary
+# if you decide to use consul_agent_bin_name: with version you can create a symlink to have multiple version installed. empty or same as bin_name = no symlink
+consul_agent_symlink_name: "{{ consul_agent_bin_name }}"
+
+### Config
+consul_agent_systemd_args: ""
+consul_agent_config: |
+  node_name = "consul-client"
+  server    = false
+  bind_addr = "0.0.0.0"
+  client_addr = "{{ ansible_default_ipv4.address }}"
+  advertise_addr  = "{{ ansible_default_ipv4.address }}"
+  datacenter = "dc1"
+  data_dir = "{{ consul_agent_data_dir }}"
+  #retry_join = [ "10.1.1.1"]
+  leave_on_terminate = false
+  disable_update_check = true
+  log_json = true
+  log_level = "warn"
+
+#  log_json = true
+#  log_level = "warn"
+#  encrypt = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+#  leave_on_terminate = false
+#  disable_update_check = true
+#
+#
+#  ports {
+#    dns = 53
+#    grpc = 8502
+#  }
+#
+#  discovery_max_stale = "1m"
+#  recursors = ["10.1.3.4", "10.1.3.5", "10.1.2.3"]
+#  dns_config {
+#    recursor_strategy = "sequential"
+#    use_cache = true
+#    allow_stale = true
+#    max_stale = "1m"
+#    cache_max_age = "1m"
+#    node_ttl = "1m"
+#  }
+#
+#  connect {
+#    enabled = true
+#  }
+#
+#  limits {
+#    http_max_conns_per_client = 500
+#  }
+#
+#  telemetry {
+#    prometheus_retention_time = "2m"
+#    disable_hostname = true
+#  }
+#
+#  tls {
+#    internal_rpc {
+#      verify_server_hostname = false
+#    }
+#  }
+
+consul_agent_config_d: ""
+#  filename1:
+#    services:
+#      - name: servicename1
+#        address: 10.1.1.1
+#        port: 8080
+#        tags:
+#          - traefik.enable=true
+#          - traefik.http.routers.kafka-ui.tls=true
+#          - traefik.http.routers.kafka-ui.entrypoints=websecureprive
+#          - traefik.http.routers.kafka-ui.rule=Host(`kafka-ui.int.test.fr`)
+#          - traefik.http.services.kafka-ui.loadbalancer.sticky.cookie.name=sticky_session
+#          - traefik.http.services.kafka-ui.loadbalancer.sticky.cookie.secure=true
+#          - traefik.http.services.kafka-ui.loadbalancer.sticky.cookie.httpOnly=true
+#          - traefik.http.middlewares.oidc-kafka-ui.plugin.oidcAuth.source=keycloak-test
+#          - traefik.http.middlewares.oidc-kafka-ui.plugin.oidcAuth.session.secret=xxxxxxxx
+#          - traefik.http.middlewares.oidc-kafka-ui.plugin.oidcAuth.redirectUrl=/callback
+#          - traefik.http.routers.kafka-ui.middlewares=oidc-kafka-ui
+#          - traefik.http.middlewares.oidc-kafka-ui.plugin.oidcAuth.claims=Contains(`realm_access.roles`,`kafka-administrateur`)
+#        meta: {}
+#        checks:
+#          - name: test-tcp
+#            tcp: 10.1.2.3:156
+#            interval: 1s
+#            timeout: 900ms
+#            failures_before_critical: 3
+#  exporter:
+#    services:
+#      - name: node-exporter
+#        port: 9100
+#        tags:
+#          - prometheus_exporter
+#        checks:
+#          - name: node-exporter-tcp
+#            tcp: 127.0.0.1:9100
+#            interval: 1s
+#            timeout: 900ms
+#            failures_before_critical: 3

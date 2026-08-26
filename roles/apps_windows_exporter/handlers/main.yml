@@ -1,0 +1,10 @@
+---
+- name: "Remove installer package"
+  ansible.windows.win_file:
+    path: '{{ _windows_exporter_copied.dest }}'
+    state: absent
+
+- name: "Remove installer msi package"
+  ansible.windows.win_file:
+    path: '{{ windows_exporter_download_dir }}\windows_exporter-{{ windows_exporter_version }}-{{ win_arch }}.msi'
+    state: absent

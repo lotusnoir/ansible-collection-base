@@ -1,0 +1,4 @@
+---
+lvm_rescanning_script: "/usr/bin/rescan-scsi-bus.sh"
+vg_name: "rocky8"
+vg_mapper: "rocky8"

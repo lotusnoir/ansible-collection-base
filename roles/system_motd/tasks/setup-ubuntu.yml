@@ -1,0 +1,13 @@
+---
+- name: 'UBUNTU | Install motd'
+  ansible.builtin.package:
+    name: update-motd
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "UBUNTU | Delete legal file"
+  ansible.builtin.file:
+    path: /etc/legal
+    state: absent

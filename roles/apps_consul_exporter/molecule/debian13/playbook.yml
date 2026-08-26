@@ -1,0 +1,18 @@
+---
+- name: Run role
+  hosts: all
+  become: true
+  any_errors_fatal: true
+  gather_facts: false
+
+  pre_tasks:
+    - name: Get minimal facts
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - distribution
+
+  tasks:
+    - name: Include role
+      ansible.builtin.include_role:
+        name: ansible-apps_consul_exporter

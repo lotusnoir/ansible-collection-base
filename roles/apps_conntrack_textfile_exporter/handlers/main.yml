@@ -1,0 +1,5 @@
+---
+- name: "Restart conntrack_textfile_exporter"
+  ansible.builtin.service:
+    name: "conntrack_textfile_exporter"
+    state: "restarted"

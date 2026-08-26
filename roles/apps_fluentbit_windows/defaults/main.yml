@@ -1,0 +1,80 @@
+---
+### Install mode
+# fluentbit_install_mode: "repo" #or build
+# fluentbit_nofile_limit: '262144'
+# fluentbit_install_dir: '/etc/fluent-bit'
+## when build
+# fluentbit_version: "2.1.9"
+# fluentbit_binary_name: '/usr/local/bin/fluent-bit'
+
+### Config file
+fluentbit_log_dir: "/var/log/fluentbit"
+fluentbit_loglevel: "info"
+fluentbit_http_server: "Off"
+fluentbit_http_bind: "0.0.0.0"
+fluentbit_http_port: "9104"
+fluentbit_buffer_path: "/tmp"
+fluentbit_buffer_sync: "normal"
+fluentbit_buffer_checksum: "off"
+fluentbit_buffer_mem_limit: "128M"
+fluentbit_include_d: false
+
+fluentbit_inputs: ""
+#  - name: tail
+#    alias: vms
+#    tag: vms
+#    path: /tmp/vms.log
+#    db: /tmp/vms.db
+#    parser: syslog
+## optional
+#    path: /var/log/syslog
+#    listen: 0.0.0.0
+#    port: 514
+#    mode: udp
+#    storage_type: filesystem
+#    parser: syslog
+#    alias: syslog
+#    path_key: logfile
+#    tag: syslog
+#    db: /var/log/syslog.db
+#    db_locking: true
+#    scrape_interval: 2
+#    buffer_chunk_size: 512K
+#    buffer_max_size:   1M
+#    refresh_interval:  60
+#    ignore_older: 1h    #help to not crash on start with too many open file
+#    mem_buf_limit: 50M
+fluentbit_filters: ""
+#  - name: modify
+#    match: '*'
+#    rules:
+#      - "Add from_syslog true"
+#    ## optional
+#    #alias: add_from_syslog
+#    #regex: 'ident ^toto$'
+#    #Record hostname ${HOSTNAME}
+#    #value: [Add from_syslog true]
+fluentbit_outputs: ""
+#  - name: 'null'
+#    match: '*'
+#  - name: kafka
+#    alias: Kafka_syslog
+#    match: syslog
+#    brokers: kafka-01.example.com:9092
+#    topics: syslog_vms
+#    timestamp_format: iso8601
+#
+#    #Optional
+#    #host: 1.1.1.1
+#    #port: 24221
+#    #match: titi
+#    #match_regex:
+#    #storage_total_limit_size: 200M
+#    #retry_limit: 10
+# fluentbit_parsers: ""
+#  - name: syslog
+#    format: regex
+#    regex: '^(?<register_time>[^ ]*) (?<source>[^ ]*) (?<level>[^ ]*) *(?<message>.*)$'
+#    time_key: time
+#    time_format: '%Y-%m-%dT%H:%M:%S %z'
+#    time_keep: "on"

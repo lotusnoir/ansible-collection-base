@@ -1,0 +1,44 @@
+---
+apt_sources_archive_types:
+  - deb
+  - deb-src
+
+apt_sources_update_cache: true
+
+# Specific to Debian
+apt_sources_debian_components:
+  - main
+#  - contrib
+#  - non-free
+apt_sources_debian_distribution: "{{ ansible_distribution_release }}"
+apt_sources_debian_repository_url: http://deb.debian.org
+apt_sources_debian_debug_repository_url: http://debug.mirrors.debian.org
+apt_sources_enable_backports: false
+apt_sources_enable_proposed: false
+apt_sources_enable_security: true
+apt_sources_enable_updates: true
+apt_sources_enable_debug: false
+
+# Specific to Ubuntu
+apt_sources_ubuntu_components:
+  - main
+#  - multiverse
+#  - restricted
+#  - universe
+apt_sources_ubuntu_repository_url: http://archive.ubuntu.com
+
+### Config.d
+# bypass update errors
+apt_sources_remove_release_change_alert: false
+apt_sources_remove_bookworm_firmare_alert: false
+# Reduce diskfootprint
+apt_sources_exclude_man: false
+apt_sources_include_locales: []
+#    - fr
+#    - en
+apt_sources_disable_caches: false
+apt_sources_compress_indexes: false
+apt_sources_ignore_additional: false
+apt_sources_force_ipv4: false
+apt_sources_auto_update: false
+apt_sources_no_backports_kernel: false

@@ -1,0 +1,5 @@
+{{ ansible_managed | comment }}
+
+{% for m in modules_blacklist | unique | sort %}
+blacklist {{ m }}
+{% endfor %}

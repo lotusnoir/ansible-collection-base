@@ -1,0 +1,30 @@
+---
+- name: "Repo install tasks"
+  when: (not __installed_bin.stat.exists) or fluentbit_install_force
+  block:
+    - name: "Debian tasks"
+      ansible.builtin.include_tasks: setup-debian.yml
+      when:
+        - ansible_facts.os_family == 'Debian'
+
+    - name: "Redhat tasks"
+      ansible.builtin.include_tasks: setup-redhat.yml
+      when:
+        - ansible_facts.os_family in ["RedHat", "Rocky", "OracleLinux"]
+
+    - name: "Ensure LimitNOFILE is set for systemd"
+      ansible.builtin.lineinfile:
+        path: /lib/systemd/system/fluent-bit.service
+        regexp: "^LimitNOFILE="
+        insertafter: "^Type=simple"
+        line: "LimitNOFILE={{ fluentbit_nofile_limit }}"
+
+    - name: "Ensure directories exist"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+        owner: root
+        group: root
+      with_items:
+        - "{{ fluentbit_config_dir }}/conf.d"

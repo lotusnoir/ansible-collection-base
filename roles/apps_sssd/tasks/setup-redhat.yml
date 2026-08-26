@@ -1,0 +1,50 @@
+---
+- name: "REDHAT-8+ | Oddjob by default doesnt not create home with skel and umask"
+  ansible.builtin.lineinfile:
+    path: "/usr/lib/systemd/system/oddjobd.service"
+    regexp: "^ExecStart=/usr/sbin/oddjobd"
+    line: "ExecStart=/usr/sbin/oddjobd -p /run/oddjobd.pid -t 300"
+    state: present
+  notify:
+    - "Reload oddjob service"
+    - "Start oddjobd"
+
+- name: "REDHAT-8 | Enable sssd"
+  ansible.builtin.command: "authconfig --update --enablesssd --enablesssdauth{% if sssd_create_homedir is sameas true %} --enablemkhomedir{% endif %}"
+  changed_when: false
+  notify: Restart sssd
+  when: ansible_facts['distribution_major_version'] == "8"
+
+- name: "REDHAT-9+ | Enable SSSD"
+  ansible.builtin.command: >
+    authselect select sssd
+    {% if sssd_create_homedir is sameas true %} with-mkhomedir{% endif %}
+    --force
+  changed_when: false
+  notify: Restart sssd
+  when: ansible_facts['distribution_major_version'] == "9"
+
+- name: "REDHAT-8+ | Clear sssd Cache"
+  ansible.builtin.command: "sss_cache -E"
+  changed_when: false
+
+- name: "REDHAT-8+ | Add sudoers on nsswitch"
+  ansible.builtin.lineinfile:
+    path: "/etc/authselect/user-nsswitch.conf"
+    line: "sudoers:    files sss"
+    state: present
+  notify: Authselect apply-changes
+
+- name: "REDHAT-8+ | Enable and start oddjobd"
+  ansible.builtin.service:
+    name: oddjobd
+    enabled: true
+    state: started
+
+# - name: "REDHAT-8+ | Add skel on user mkdir"
+#   ansible.builtin.lineinfile:
+#     path: "/etc/pam.d/system-auth"
+#     regexp: '^(.*)pam_oddjob_mkhomedir.so$'
+#     line: '\1am_oddjob_mkhomedir.so skel=/etc/skel/ umask=002'
+#     backrefs: true
+#     state: present

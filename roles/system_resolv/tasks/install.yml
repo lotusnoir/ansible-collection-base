@@ -1,0 +1,36 @@
+---
+- name: "Ensure resolvconf package is absent"
+  ansible.builtin.package:
+    name: resolvconf
+    state: absent
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  when: resolv_resolvconf_remove | bool
+
+- name: "Check if /etc/NetworkManager/"
+  ansible.builtin.stat:
+    path: /etc/NetworkManager/
+  register: network_manager
+  when: resolv_networkmanager_disable_dns | bool
+
+- name: "Disable dns management by NetworkManager"
+  ansible.builtin.copy:
+    dest: "/etc/NetworkManager/conf.d/90-dns-none.conf"
+    mode: '0644'
+    content: |
+      [main]
+      dns=none
+  when:
+    - resolv_networkmanager_disable_dns | bool
+    - network_manager.stat.exists
+
+- name: "Configure resolv.conf"
+  ansible.builtin.template:
+    src: "resolv.conf.j2"
+    dest: "{{ resolv_file }}"
+    mode: "0644"
+  when:
+    - resolv_nameservers is defined
+    - resolv_nameservers | length > 0

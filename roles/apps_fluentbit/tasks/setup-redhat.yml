@@ -1,0 +1,28 @@
+---
+- name: "REDHAT: Add repository"
+  ansible.builtin.yum_repository:
+    name: fluent-bit
+    description: "Fluent Bit"
+    baseurl: "https://packages.fluentbit.io/centos/$releasever/"
+    enabled: true
+    gpgcheck: false
+    gpgkey: "https://packages.fluentbit.io/fluentbit.key"
+
+- name: "REDHAT | Install fluentbit package"
+  ansible.builtin.dnf:
+    name: "fluent-bit"
+    nobest: true
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "REDHAT10+ | Install openssl"
+  ansible.builtin.dnf:
+    name: "openssl"
+    nobest: true
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  when: ansible_facts.os_family == 'RedHat' and (ansible_facts.distribution_major_version | int) == 10

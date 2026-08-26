@@ -1,0 +1,17 @@
+---
+- name: "Special tasks for Ubuntu"
+  when:
+    - ansible_facts.distribution == 'Ubuntu'
+    - ansible_facts.distribution_major_version | int >= 22
+  block:
+    - name: "UBUNTU22+ | Disable systemd-networkd-wait-online and ensure its masked"
+      ansible.builtin.systemd_service:
+        name: systemd-networkd-wait-online.service
+        enabled: false
+        masked: true
+
+    - name: "UBUNTU22+ | Disable systemd-resolved and ensure its masked"
+      ansible.builtin.systemd_service:
+        name: systemd-resolved.service
+        enabled: false
+        masked: true

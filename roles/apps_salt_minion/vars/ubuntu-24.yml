@@ -1,0 +1,3 @@
+---
+salt_minion_owner: "root"
+salt_minion_group: "root"

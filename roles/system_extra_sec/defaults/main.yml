@@ -1,0 +1,16 @@
+---
+extra_sec_pwquality_update: false
+
+extra_sec_issue_update: true
+extra_sec_issue_content: "Authorized uses only. All activity may be monitored and reported.\n"
+
+extra_sec_logs_perms: false
+extra_sec_umask_rc: false
+
+extra_sec_crontab_allow: false
+extra_sec_crontab_allow_content: |
+  root
+
+extra_sec_at_allow: false
+extra_sec_at_allow_content: |
+  root

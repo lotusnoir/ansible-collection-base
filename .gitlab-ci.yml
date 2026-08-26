@@ -1,0 +1,367 @@
+stages:
+  - sync
+  - validate
+    #  - build
+  - push
+
+variables:
+  GIT_STRATEGY: clone
+  GIT_DEPTH: 1
+  COLLECTION_PROJECT: "ansible-collection-base"
+  ROLES_DIR: "roles"
+  GITHUB_USER: "lotusnoir"
+
+# ==========================================================
+# Workflow
+# ==========================================================
+workflow:
+  rules:
+    # Ne pas relancer un pipeline sur le commit automatique
+    - if: '$CI_COMMIT_MESSAGE =~ /^chore: synchronize Ansible roles/'
+      when: never
+
+    - when: always
+
+# ==========================================================
+# Synchronisation des rôles
+# ==========================================================
+sync_roles:
+  stage: sync
+
+  image: alpine:3.22
+
+  before_script:
+    - apk add --no-cache git curl jq
+
+    - git config --global user.name "GitLab CI"
+    - git config --global user.email "gitlab-ci@pleal.ovh"
+
+  script:
+    - |
+      set -eu
+
+      echo "=========================================="
+      echo "Ansible Collection synchronization"
+      echo "=========================================="
+
+      echo "GitLab          : ${CI_SERVER_HOST}"
+      echo "Group           : ${CI_PROJECT_NAMESPACE}"
+      echo "Collection      : ${COLLECTION_PROJECT}"
+      echo "Project ID      : ${CI_PROJECT_ID}"
+      echo ""
+
+      # ------------------------------------------------------
+      # Nettoyage
+      # ------------------------------------------------------
+
+      echo "Cleaning ${ROLES_DIR}..."
+
+      mkdir -p "${ROLES_DIR}"
+
+      rm -rf "${ROLES_DIR:?}"/*
+
+
+      # ------------------------------------------------------
+      # Récupération des informations du projet courant
+      # ------------------------------------------------------
+
+      echo "Getting current project information..."
+
+      PROJECT_JSON=$(curl \
+        --fail \
+        --silent \
+        --show-error \
+        --header "PRIVATE-TOKEN: ${GITLAB_API_TOKEN}" \
+        "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}")
+
+      GROUP_ID=$(echo "${PROJECT_JSON}" | jq -r '.namespace.id')
+      GROUP_NAME=$(echo "${PROJECT_JSON}" | jq -r '.namespace.full_path // .namespace.name')
+
+      echo "Group name      : ${GROUP_NAME}"
+      echo "Group ID        : ${GROUP_ID}"
+
+      if [ -z "${GROUP_ID}" ] || [ "${GROUP_ID}" = "null" ]; then
+        echo "ERROR: Unable to determine GitLab group ID"
+        exit 1
+      fi
+
+
+      # ------------------------------------------------------
+      # Récupération des projets du groupe
+      # ------------------------------------------------------
+
+      PAGE=1
+      PROJECTS_FILE="/tmp/projects.json"
+
+      echo ""
+      echo "Retrieving projects..."
+
+      echo "[]" > "${PROJECTS_FILE}"
+
+      while true
+      do
+        PAGE_FILE="/tmp/projects-${PAGE}.json"
+
+        echo "Retrieving page ${PAGE}..."
+
+        curl \
+          --fail \
+          --silent \
+          --show-error \
+          --header "PRIVATE-TOKEN: ${GITLAB_API_TOKEN}" \
+          "${CI_API_V4_URL}/groups/${GROUP_ID}/projects?include_subgroups=false&per_page=100&page=${PAGE}" \
+          > "${PAGE_FILE}"
+
+        COUNT=$(jq 'length' "${PAGE_FILE}")
+
+        echo "Projects returned: ${COUNT}"
+
+        if [ "${COUNT}" -eq 0 ]; then
+          rm -f "${PAGE_FILE}"
+          break
+        fi
+
+        jq -s '.[0] + .[1]' \
+          "${PROJECTS_FILE}" \
+          "${PAGE_FILE}" \
+          > "${PROJECTS_FILE}.tmp"
+
+        mv "${PROJECTS_FILE}.tmp" "${PROJECTS_FILE}"
+
+        rm -f "${PAGE_FILE}"
+
+        PAGE=$((PAGE + 1))
+      done
+
+      PROJECT_COUNT=$(jq 'length' "${PROJECTS_FILE}")
+
+      echo ""
+      echo "Projects found: ${PROJECT_COUNT}"
+
+
+      # ------------------------------------------------------
+      # Synchronisation
+      # ------------------------------------------------------
+
+      jq -c '.[]' "${PROJECTS_FILE}" |
+      while read -r PROJECT
+      do
+
+        PROJECT_NAME=$(echo "${PROJECT}" | jq -r '.name')
+        PROJECT_PATH=$(echo "${PROJECT}" | jq -r '.path')
+        DEFAULT_BRANCH=$(echo "${PROJECT}" | jq -r '.default_branch')
+
+        echo ""
+        echo "------------------------------------------"
+        echo "Project : ${PROJECT_NAME}"
+        echo "Path    : ${PROJECT_PATH}"
+        echo "Branch  : ${DEFAULT_BRANCH}"
+
+
+        # ----------------------------------------------------
+        # Exclusion de la collection
+        # ----------------------------------------------------
+        if [ "${PROJECT_PATH}" = "${COLLECTION_PROJECT}" ]; then
+          echo "SKIP: collection project"
+          continue
+        fi
+
+        # ----------------------------------------------------
+        # Seuls les projets ansible-* sont synchronisés
+        # ----------------------------------------------------
+        case "${PROJECT_PATH}" in
+          ansible-*)
+            ROLE_NAME="${PROJECT_PATH#ansible-}"
+            ;;
+          *)
+            echo "SKIP: project does not start with ansible-"
+            continue
+            ;;
+        esac
+
+        echo "Role    : ${ROLE_NAME}"
+
+        # ----------------------------------------------------
+        # Vérification de la branche
+        # ----------------------------------------------------
+        if [ -z "${DEFAULT_BRANCH}" ] ||
+           [ "${DEFAULT_BRANCH}" = "null" ]; then
+          echo "SKIP: no default branch"
+          continue
+        fi
+
+        # ----------------------------------------------------
+        # Clone
+        # ----------------------------------------------------
+        CLONE_DIR="/tmp/role-${PROJECT_PATH}"
+        rm -rf "${CLONE_DIR}"
+        echo "Cloning ${PROJECT_PATH}..."
+        git clone \
+          --depth 1 \
+          --branch "${DEFAULT_BRANCH}" \
+          "https://oauth2:${GITLAB_API_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_NAMESPACE}/${PROJECT_PATH}.git" \
+          "${CLONE_DIR}"
+
+        # ----------------------------------------------------
+        # Copie du rôle
+        # ----------------------------------------------------
+        echo "Copying role..."
+        rm -rf "${ROLES_DIR:?}/${ROLE_NAME}"
+        mkdir -p "${ROLES_DIR}/${ROLE_NAME}"
+        cp -a \
+          "${CLONE_DIR}/." \
+          "${ROLES_DIR}/${ROLE_NAME}/"
+
+        # ----------------------------------------------------
+        # Suppression des métadonnées Git
+        # ----------------------------------------------------
+        rm -rf "${ROLES_DIR}/${ROLE_NAME}/.git"
+        rm -rf "${ROLES_DIR}/${ROLE_NAME}/.gitlab"
+
+        # ----------------------------------------------------
+        # Nettoyage
+        # ----------------------------------------------------
+        rm -rf "${CLONE_DIR}"
+        echo "OK: ${ROLE_NAME}"
+
+      done
+
+      # ------------------------------------------------------
+      # Résultat
+      # ------------------------------------------------------
+      echo ""
+      echo "=========================================="
+      echo "Synchronized roles"
+      echo "=========================================="
+
+      for role in "${ROLES_DIR}"/*; do
+        [ -d "${role}" ] && basename "${role}"
+      done | sort
+
+      # ------------------------------------------------------
+      # Git status
+      # ------------------------------------------------------
+      echo ""
+      echo "=========================================="
+      echo "Git status"
+      echo "=========================================="
+      git status --short
+
+      # ------------------------------------------------------
+      # Commit uniquement si nécessaire
+      # ------------------------------------------------------
+      git add "${ROLES_DIR}"
+
+      if git diff --cached --quiet; then
+        echo ""
+        echo "No changes detected."
+        exit 0
+      fi
+
+      echo ""
+      echo "Changes detected:"
+      git diff --cached --stat
+
+      # ------------------------------------------------------
+      # Commit
+      # ------------------------------------------------------
+      git commit -m "chore: synchronize Ansible roles"
+
+      # ------------------------------------------------------
+      # Push
+      # ------------------------------------------------------
+      echo ""
+      echo "Pushing collection..."
+
+      git -c http.extraHeader="PRIVATE-TOKEN: ${GITLAB_API_TOKEN}" \
+        push origin "HEAD:${CI_DEFAULT_BRANCH}"
+
+      echo ""
+      echo "Collection successfully synchronized."
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "trigger"'
+
+
+# ==========================================================
+# Validation
+# ==========================================================
+validate_collection:
+  stage: validate
+
+  image:
+    name: quay.io/ansible/ansible-runner:latest
+    entrypoint: [""]
+
+  needs:
+    - sync_roles
+
+  script:
+    - ansible-galaxy collection build --force
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "trigger"'
+
+
+# ==========================================================
+# Build de la collection
+# ==========================================================
+#build_collection:
+#  stage: build
+#
+#  image:
+#    name: quay.io/ansible/ansible-runner:latest
+#    entrypoint: [""]
+#
+#  needs:
+#    - validate_collection
+#
+#  script:
+#    - mkdir -p build
+#    - ansible-galaxy collection build --force --output-path build/
+#
+#  artifacts:
+#    name: "ansible-collection-${CI_COMMIT_SHORT_SHA}"
+#
+#    paths:
+#      - build/*.tar.gz
+#
+#    expire_in: 30 days
+#
+#  rules:
+#    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+#    - if: '$CI_PIPELINE_SOURCE == "trigger"'
+
+
+##################################################
+# PUSH CODE WHEN ALL TEST OK
+##################################################
+push_src_on_github:
+  stage: push
+  image: alpine:latest
+  before_script:
+    - apk add git openssh-client
+    - eval $(ssh-agent -s)
+    - echo "${GITHUB_USER_PRIVATE_KEY}" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo -e "Host *\n\tUser ansible\n\tStrictHostKeyChecking no\n\tForwardAgent yes\n\n" > ~/.ssh/config
+    - git config --global user.email "${GITHUB_USER_EMAIL}"
+    - git config --global user.name "${GITHUB_USER}"
+    - git config --global init.defaultBranch main
+    - COMMENT=$(git log -1 --pretty=%B | head -1)
+  script:
+    - if grep -q "^skip" CHANGELOG.md 2>/dev/null; then
+        echo "⚠️  Changelog marqué 'skip' — aucun push GitHub effectué.";
+        exit 0;
+      fi 
+    - git clone git@github.com:${GITHUB_USER}/ansible-collection-base.git /tmp/ansible-collection-base
+    - find /tmp/ansible-collection-base -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf "{}" +;
+    - rm -rf .git
+    - cp -r . /tmp/ansible-collection-base/
+    - cd /tmp/ansible-collection-base
+    - git add -A
+    - git commit -m "${COMMENT}" || echo "No changes, nothing to commit!"
+    - git push --follow-tags

@@ -1,0 +1,8 @@
+---
+- name: "CENTOS6 | Add sudo auth direcly on file - {{ item.name }}"
+  ansible.builtin.lineinfile:
+    dest: /etc/sudoers
+    regexp: '^{{ item.name }}'
+    insertafter: '^root'
+    line: '{{ item.name }}     ALL=(ALL) NOPASSWD:ALL'
+  with_items: "{{ autologin_users }}"

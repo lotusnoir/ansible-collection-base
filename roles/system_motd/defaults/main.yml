@@ -1,0 +1,22 @@
+---
+motd_script_remove_all: false
+motd_script_remove_default: true
+
+motd_script_local_path: ""
+
+motd_script_content: {}
+  #  - name: titi.sh
+  #    content: "echo mon script custom"
+
+motd_script_default: true
+motd_script_default_priority: 20
+# Role script info options
+motd_check_boot_device: false
+motd_boot_device: sda
+motd_print_processes: false
+motd_print_ansible_groups: false
+motd_disable_pam_sshd: false
+
+# For redhat family we must add the list of running scripts
+motd_script_add_profile:
+  - { name: infos, priority: "{{ motd_script_default_priority }}" }

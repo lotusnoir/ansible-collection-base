@@ -1,0 +1,12 @@
+---
+# regex of primary ip address to find primary-nics
+vmwaretools_primary_int_subnet: "172."
+wmwaretools_config:
+  guestinfo:
+    exclude-nics: "docker*,br-*,veth*,lo*"
+    primary-nics: "{{ private_interface }}"
+    disable-ipv6: true
+  logging:
+    log.level: "warning"
+    vmsvc.level: "error"
+    maxCacheEntries: 2048

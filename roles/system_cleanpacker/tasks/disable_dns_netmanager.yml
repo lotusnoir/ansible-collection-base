@@ -1,0 +1,30 @@
+---
+- name: "Check if /etc/NetworkManager/"
+  ansible.builtin.stat:
+    path: /etc/NetworkManager/
+  register: network_manager
+
+- name: "Special tasks for Networkmanager"
+  when: network_manager.stat.exists
+  block:
+    - name: "Disable dns managerment by network manager"
+      ansible.builtin.copy:
+        dest: "/etc/NetworkManager/conf.d/90-dns-none.conf"
+        mode: '0644'
+        content: |
+          [main]
+          dns=none
+
+- name: "Find network config files"
+  ansible.builtin.find:
+    paths: /etc/NetworkManager/system-connections/
+    file_type: file
+    patterns: "*"
+  register: find_results
+
+- name: "Remove files"
+  ansible.builtin.file:
+    path: "{{ item['path'] }}"
+    state: absent
+  no_log: true
+  with_items: "{{ find_results['files'] }}"

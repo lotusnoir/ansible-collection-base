@@ -1,0 +1,15 @@
+---
+### Binary install
+conntrack_exporter_version: "0.3.1"
+conntrack_exporter_url: "https://github.com/hiveco/conntrack_exporter/releases/download/v{{ conntrack_exporter_version }}/conntrack_exporter-amd64-linux"
+conntrack_exporter_install_dir: "/usr/local/bin"
+conntrack_exporter_force_install: false
+
+### Systemd options
+conntrack_exporter_listen_port: "9318"
+conntrack_exporter_bind_address: "0.0.0.0"
+conntrack_exporter_listen_path: "/metrics"
+conntrack_exporter_ignore_hosts: ""
+conntrack_exporter_log_event: false
+conntrack_exporter_log_format: "netfilter"
+conntrack_exporter_debug: false

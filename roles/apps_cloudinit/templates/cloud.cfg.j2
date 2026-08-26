@@ -1,0 +1,148 @@
+{{ ansible_managed | comment }}
+
+users:
+  - default
+
+{% if cloudinit_disableroot is defined and cloudinit_disableroot is boolean %}
+disable_root: {{ cloudinit_disableroot | bool | lower }}
+{% endif %}
+
+{% if cloudinit_preservehostname is defined and cloudinit_preservehostname is boolean %}
+preserve_hostname: {{ cloudinit_preservehostname | bool | lower }}
+{% endif %}
+
+{% if cloudinit_aptpreservesourceslist is defined and cloudinit_aptpreservesourceslist is boolean %}
+apt_preserve_sources_list: {{ cloudinit_aptpreservesourceslist | bool | lower }}
+{% endif %}
+
+{% if cloudinit_ssh_deletekeys is defined and cloudinit_ssh_deletekeys is boolean %}
+ssh_deletekeys: {{ cloudinit_ssh_deletekeys | bool | lower }} 
+{% endif %}
+
+{% if cloudinit_ssh_genkeytypes is defined and cloudinit_ssh_genkeytypes | length %}
+ssh_genkeytypes: {{ cloudinit_ssh_genkeytypes }}
+{% endif %}
+
+{% if cloudinit_syslog_fix_perms is defined and cloudinit_syslog_fix_perms | length %}
+syslog_fix_perms: {{ cloudinit_syslog_fix_perms }}
+{% endif %}
+
+{% if cloudinit_disable_vmware_customization is defined and cloudinit_disable_vmware_customization is boolean %}
+disable_vmware_customization: {{ cloudinit_disable_vmware_customization | bool | lower }}
+{% endif %}
+
+{% if cloudinit_cloudinitmodules is defined and cloudinit_cloudinitmodules | length %}
+cloud_init_modules:
+{% for cloudinitmodules in cloudinit_cloudinitmodules %}
+ - {{ cloudinitmodules }}
+{% endfor %}
+{% endif %}
+
+{% if cloudinit_cloudconfigmodules is defined and cloudinit_cloudconfigmodules | length %}
+cloud_config_modules:
+{% for cloudconfigmodules in cloudinit_cloudconfigmodules %}
+ - {{ cloudconfigmodules }}
+{% endfor %}
+{% endif %}
+
+{% if cloudinit_cloudfinalmodules is defined and cloudinit_cloudfinalmodules | length %}
+cloud_concloud_final_modulesfig_modules:
+{% for cloudfinalmodules in cloudinit_cloudfinalmodules %}
+ - {{ cloudfinalmodules }}
+{% endfor %}
+{% endif %}
+
+{% if ansible_os_family == 'RedHat' %}
+system_info:
+  # This will affect which distro class gets used
+  distro: rhel
+  # Default user name + that default users groups (if added/used)
+  default_user:
+    name: cloud-user
+    lock_passwd: True
+    gecos: Cloud User
+    groups: [adm, systemd-journal]
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    shell: /bin/bash
+  network:
+    renderers: ['eni', 'netplan', 'network-manager', 'sysconfig', 'networkd']
+  # Other config here will be given to the distro class and/or path classes
+  paths:
+    cloud_dir: /var/lib/cloud/
+    templates_dir: /etc/cloud/templates/
+  ssh_svcname: sshd
+{% endif %}
+
+{% if ansible_distribution == 'Debian' %}
+system_info:
+   distro: debian
+   default_user:
+     name: debian
+     lock_passwd: True
+     gecos: Debian
+     groups: [adm, audio, cdrom, dialout, dip, floppy, netdev, plugdev, sudo, video]
+     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+     shell: /bin/bash
+   paths:
+      cloud_dir: /var/lib/cloud/
+      templates_dir: /etc/cloud/templates/
+      upstart_dir: /etc/init/
+   package_mirrors:
+     - arches: [default]
+       failsafe:
+         primary: http://deb.debian.org/debian
+         security: http://security.debian.org/
+   ssh_svcname: ssh
+{% endif %}
+
+{% if ansible_distribution == 'Ubuntu' %}
+system_info:
+   # This will affect which distro class gets used
+   distro: ubuntu
+   # Default user name + that default users groups (if added/used)
+   default_user:
+     name: ubuntu
+     lock_passwd: True
+     gecos: Ubuntu
+     groups: [adm, audio, cdrom, dialout, dip, floppy, lxd, netdev, plugdev, sudo, video]
+     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+     shell: /bin/bash
+   network:
+     renderers: ['netplan', 'eni', 'sysconfig']
+   # Automatically discover the best ntp_client
+   ntp_client: auto
+   # Other config here will be given to the distro class and/or path classes
+   paths:
+      cloud_dir: /var/lib/cloud/
+      templates_dir: /etc/cloud/templates/
+   package_mirrors:
+     - arches: [i386, amd64]
+       failsafe:
+         primary: http://archive.ubuntu.com/ubuntu
+         security: http://security.ubuntu.com/ubuntu
+       search:
+         primary:
+           - http://%(ec2_region)s.ec2.archive.ubuntu.com/ubuntu/
+           - http://%(availability_zone)s.clouds.archive.ubuntu.com/ubuntu/
+           - http://%(region)s.clouds.archive.ubuntu.com/ubuntu/
+         security: []
+     - arches: [arm64, armel, armhf]
+       failsafe:
+         primary: http://ports.ubuntu.com/ubuntu-ports
+         security: http://ports.ubuntu.com/ubuntu-ports
+       search:
+         primary:
+           - http://%(ec2_region)s.ec2.ports.ubuntu.com/ubuntu-ports/
+           - http://%(availability_zone)s.clouds.ports.ubuntu.com/ubuntu-ports/
+           - http://%(region)s.clouds.ports.ubuntu.com/ubuntu-ports/
+         security: []
+     - arches: [default]
+       failsafe:
+         primary: http://ports.ubuntu.com/ubuntu-ports
+         security: http://ports.ubuntu.com/ubuntu-ports
+   ssh_svcname: ssh
+{% endif %}
+
+{% if cloudinit_extra is defined and cloudinit_extra | length %}
+{{ cloudinit_extra }}
+{% endif %}

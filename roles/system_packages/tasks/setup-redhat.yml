@@ -1,0 +1,45 @@
+---
+- name: "REDHAT | Install packages"
+  ansible.builtin.dnf:
+    name: "{{ [packages_common, packages_family, packages_distrib, packages_distrib_version, packages_extra] | map('default', []) | flatten }}"
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  when:
+    - (packages_common is defined and packages_common|length>0) or
+      (packages_family is defined and packages_family|length>0) or
+      (packages_distrib is defined and packages_distrib|length>0) or
+      (packages_distrib_version is defined and packages_distrib_version|length>0) or
+      (packages_extra is defined and packages_extra|length>0)
+
+- name: "REDHAT | Remove packages"
+  ansible.builtin.dnf:
+    name: "{{ [packages_rm_common, packages_rm_family, packages_rm_distrib, packages_rm_distrib_version, packages_rm_extra] | map('default', []) | flatten }}"
+    state: absent
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  when:
+    - (packages_rm_common is defined and packages_rm_common|length>0) or
+      (packages_rm_family is defined and packages_rm_family|length>0) or
+      (packages_rm_distrib is defined and packages_rm_distrib|length>0) or
+      (packages_rm_distrib_version is defined and packages_rm_distrib_version|length>0) or
+      (packages_rm_extra is defined and packages_rm_extra|length>0)
+
+- name: "REDHAT | Remove packages relationship"
+  ansible.builtin.shell: yum remove -y `package-cleanup --leaves`
+  with_sequence: count=3
+  changed_when: false
+  when:
+    - package_repo_yum_cleanup is defined
+    - package_repo_yum_cleanup|bool
+
+- name: "REDHAT | Packages clean all"
+  ansible.builtin.shell: yum clean all && rm -rf /var/cache/yum
+  changed_when: false
+  when:
+    - package_repo_yum_cleanup is defined
+    - package_repo_yum_cleanup|bool
