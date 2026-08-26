@@ -2,6 +2,7 @@
 stages:
   - changes
   - push
+  - trigger
 
 variables:
   GITHUB_USER: lotusnoir
@@ -98,3 +99,18 @@ push_src_on_github:
     # - git diff --quiet && echo "✅ Aucun changement à pousser." && exit 0
     - git commit -m "${COMMENT}" || echo "No changes, nothing to commit!"
     - git push --follow-tags
+
+##################################################
+# TRIGGER COLLECTION GENERATION
+trigger_collection:
+  stage: trigger
+  needs:
+    - push_src_on_github
+
+  trigger:
+    project: ansible-roles_base/ansible-collection-base
+    branch: main
+    strategy: depend
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
