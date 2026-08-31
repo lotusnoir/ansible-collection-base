@@ -20,4 +20,4 @@ tags:
   - system
   - base
 
-repository: https://gitlab.pleal.ovh/ansible-roles_base/ansible-collection-base
+repository: https://github.com/lotusnoir/ansible-collection-base 
