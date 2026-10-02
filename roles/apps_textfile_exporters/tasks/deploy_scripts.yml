@@ -1,45 +1,33 @@
 ---
 - name: "Set temp dir name"
   ansible.builtin.set_fact:
-    _textfile_exporters_temp_dir: "{{ item.split('/')[-1] }}"
+    _textfile_exporters_temp_dir: "{{ item | basename }}"
   tags:
     - deploy
     - scripts
 
-- name: "Check for temp dir"
-  ansible.builtin.stat:
-    path: "/tmp/{{ _textfile_exporters_temp_dir }}"
-  changed_when: false
-  delegate_to: localhost
-  register: exporters_tempdir
-  tags:
-    - deploy
-    - scripts
-
-- name: "Download textfile exporter scripts localy"
+- name: "Checkout textfile exporter repository locally"
   ansible.builtin.git:
     repo: "{{ item }}"
     dest: "/tmp/{{ _textfile_exporters_temp_dir }}"
+    update: true
+    # force: true
   register: git_result
   retries: 12
   delay: 10
   until: git_result is success
   delegate_to: localhost
-  when: not exporters_tempdir.stat.exists
+  run_once: true
   tags:
     - deploy
     - scripts
 
-- name: "Copy local scripts remotely"
+- name: "Copy textfile exporter scripts remotely"
   ansible.builtin.copy:
-    src: "{{ copy }}"
-    dest: "{{ textfile_exporters_install }}/{{ copy | basename }}"
+    src: "/tmp/{{ _textfile_exporters_temp_dir }}/"
+    dest: "{{ textfile_exporters_install }}/"
     mode: "0755"
-    remote_src: false
-  loop: "{{ query('fileglob', '/tmp/' + _textfile_exporters_temp_dir + '/*') }}"
-  loop_control:
-    loop_var: copy
-  when: item is not none
+    directory_mode: "0755"
   tags:
     - deploy
     - scripts

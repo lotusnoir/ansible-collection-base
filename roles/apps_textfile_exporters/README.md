@@ -38,7 +38,7 @@ See [variables](/defaults/main.yml) for more details.
           become_method: sudo
           gather_facts: true
           roles:
-            - role: ansible-apps_textfile_exporters
+            - role: ansible-apps_textfile_exporters or lotusnoir.base.apps_textfile_exporters
 
 ## License
 
