@@ -4,6 +4,16 @@
   become: true
   any_errors_fatal: true
 
+  pre_tasks:
+    - name: Create /etc/ssh directory on RedHat systems
+      ansible.builtin.file:
+        path: /etc/ssh
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      when: ansible_facts['os_family'] == "RedHat"
+
   tasks:
     - name: Include role
       ansible.builtin.include_role:

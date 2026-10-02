@@ -38,7 +38,7 @@ See [variables](/defaults/main.yml) for more details.
           become_method: sudo
           gather_facts: true
           roles:
-            - role: ansible-system_motd
+            - role: ansible-system_motd or lotusnoir.base.system_motd
 
 ## License
 

@@ -38,7 +38,7 @@ See [variables](/defaults/main.yml) for more details.
           become_method: sudo
           gather_facts: true
           roles:
-            - role: ansible-system_lvm
+            - role: ansible-system_lvm or lotusnoir.base.system_lvm
 
 ## License
 

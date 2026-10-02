@@ -56,7 +56,7 @@
     - lv.filesystem != 'xfs'
 
 - name: Mkswap with new space
-  ansible.builtin.command: "mkswap /dev/mapper/{{ vg.vg_name }}-swap"
+  ansible.builtin.command: "mkswap /dev/mapper/{{ vg.vgname }}-swap"
   changed_when: false
   when:
     - lv.create|bool
