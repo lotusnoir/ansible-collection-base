@@ -2,7 +2,7 @@
 #{{ ansible_managed | comment }}
 
 {% for item in motd_script_add_profile %}
-if [ -n "$SSH_CONNECTION" ] && [ "$UID" -gt 199 ]; then
+if [ -n "$SSH_CONNECTION" ] && [ "$UID" -gt 199 ] && tty -s; then
     {{ __motd_config_path }}/{{ item.priority ~ '-' ~ item.name }}
 fi
 {% endfor %}
