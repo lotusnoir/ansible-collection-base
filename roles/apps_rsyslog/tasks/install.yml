@@ -1,74 +1,160 @@
 ---
-- name: "Check for rsyslog dir"
-  ansible.builtin.stat:
+# NOTE: package/file/systemd modules are already idempotent, so we no longer
+# gate the whole install block behind a "is rsyslog already installed" check.
+# This lets the role reconcile drift (workdir deleted, service stopped,
+# repo missing) on every run instead of only on the very first install.
+
+- name: "REDHAT: Add repository"
+  ansible.builtin.yum_repository:
+    name: rsyslog
+    description: "Adiscon RHEL-$releasever - local packages for $basearch"
+    baseurl: "http://rpms.adiscon.com/v8-stable-daily/rhel-$releasever/$basearch"
+    enabled: true
+    gpgcheck: true
+    gpgkey: "https://rpms.adiscon.com/RPM-GPG-KEY-Adiscon"
+    protect: true
+  become: true
+  # Previously this only matched ansible_facts.distribution == 'RedHat',
+  # which silently skipped Rocky/AlmaLinux/OracleLinux even though the
+  # README claims support for them via EPEL. os_family covers the whole
+  # RHEL family; adjust here if you need per-distro baseurls instead of
+  # the generic "rhel-$releasever" path.
+  when: ansible_facts.os_family == 'RedHat'
+
+- name: "Install rsyslog package"
+  ansible.builtin.package:
+    name: rsyslog
+    state: present
+  become: true
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+
+- name: "Create {{ rsyslog_working_dir }}"
+  ansible.builtin.file:
     path: "{{ rsyslog_working_dir }}"
-  changed_when: false
-  register: rsyslog_install
+    owner: "{{ rsyslog_user }}"
+    group: "{{ rsyslog_group }}"
+    mode: "0750"
+    state: directory
+  become: true
 
-- name: "Install tasks"
-  when: not rsyslog_install.stat.exists
+- name: "Start and enable service"
+  ansible.builtin.systemd_service:
+    name: rsyslog
+    state: started
+    enabled: true
+  become: true
+
+- name: "Render candidate rsyslog configuration (rendered locally, not yet deployed)"
+  ansible.builtin.set_fact:
+    __rsyslog_conf_content: "{{ lookup('ansible.builtin.template', 'rsyslog.conf.j2') }}"
+
+- name: "Deploy and validate global configuration file (auto-rollback on failure)"
+  become: true
   block:
-    - name: "REDHAT: Add repository"
-      ansible.builtin.yum_repository:
-        name: rsyslog
-        description: "Adiscon RHEL-$releasever - local packages for $basearch"
-        baseurl: "http://rpms.adiscon.com/v8-stable-daily/rhel-$releasever/$basearch"
-        enabled: true
-        gpgcheck: false
-        gpgkey: "https://rpms.adiscon.com/RPM-GPG-KEY-Adiscon"
-        protect: true
-      when: ansible_facts.distribution == 'RedHat'
-
-    - name: "REDHAT: Install rsyslog package"
-      ansible.builtin.package:
-        name: rsyslog
-        state: present
-      register: __pkg_result
-      retries: 12
-      delay: 10
-      until: __pkg_result is success
-
-    - name: "Create {{ rsyslog_working_dir }}"
-      ansible.builtin.file:
-        path: "{{ rsyslog_working_dir }}"
+    - name: "Write candidate configuration to /etc/rsyslog.conf (backup kept)"
+      ansible.builtin.copy:
+        content: "{{ __rsyslog_conf_content }}"
+        dest: /etc/rsyslog.conf
         owner: "{{ rsyslog_user }}"
         group: "{{ rsyslog_group }}"
-        mode: "0755"
-        state: directory
+        mode: "0640"
+        backup: true
+      register: __rsyslog_conf_deployed
+      notify: Restart rsyslog
 
-    - name: "Start and enable service"
-      ansible.builtin.service:
-        name: rsyslog
-        state: started
-        enabled: true
-        daemon_reload: true
+    - name: "Validate full configuration syntax"
+      ansible.builtin.command: "rsyslogd -N1"
+      changed_when: false
+      register: __rsyslog_conf_check
+      # rsyslogd -N1 exits 1 on ANY diagnostic output, including harmless
+      # warnings (e.g. "imfile: no files configured to be monitored" when no
+      # input() is defined yet). Only fail on actual parse/config errors,
+      # identifiable by the "rsyslogd: error" prefix rsyslog itself uses.
+      failed_when: __rsyslog_conf_check.stderr is search('(?i)rsyslogd:\s*error')
+  rescue:
+    - name: "Rollback to previous configuration (validation failed)"
+      ansible.builtin.copy:
+        src: "{{ __rsyslog_conf_deployed.backup_file }}"
+        dest: /etc/rsyslog.conf
+        owner: "{{ rsyslog_user }}"
+        group: "{{ rsyslog_group }}"
+        mode: "0640"
+        remote_src: true
+      when: __rsyslog_conf_deployed.backup_file is defined
 
-- name: "Update global configuration file"
-  ansible.builtin.template:
-    src: rsyslog.conf.j2
-    dest: /etc/rsyslog.conf
-    owner: "{{ rsyslog_user }}"
-    group: "{{ rsyslog_group }}"
-    mode: "0640"
-  notify: Restart rsyslog
-
-- name: "Add custom configuration files"
-  ansible.builtin.template:
-    src: "custom.conf.j2"
-    dest: "/etc/rsyslog.d/{{  item.name }}.conf"
-    owner: "{{ rsyslog_user }}"
-    group: "{{ rsyslog_group }}"
-    mode: "0640"
-  when:
-    - rsyslog_d_custom is defined and rsyslog_d_custom | length > 0
-  with_items: "{{ rsyslog_d_custom }}"
-  notify: Restart rsyslog
+    - name: "Fail loudly after rollback"
+      ansible.builtin.fail:
+        msg: >-
+          Rendered rsyslog.conf failed validation (see rsyslogd -N1 output above)
+          and was rolled back to the previous working configuration.
 
 - name: "Remove configurations"
   ansible.builtin.file:
-    dest: "/etc/rsyslog.d/{{ item }}"
+    path: "/etc/rsyslog.d/{{ item }}"
     state: absent
-  when:
-    - rsyslog_d_remove is defined and rsyslog_d_remove | length > 0
-  with_items: "{{ rsyslog_d_remove }}"
+  become: true
+  loop: "{{ rsyslog_d_remove }}"
+  when: rsyslog_d_remove | default([]) | length > 0
   notify: Restart rsyslog
+  # Moved removal BEFORE deploying/validating custom fragments: if a
+  # fragment named in rsyslog_d_remove is the one causing a broken
+  # config, we want it gone before we validate, not after.
+
+- name: "Deploy and validate custom configuration fragments (auto-rollback on failure)"
+  become: true
+  when: rsyslog_d_custom | default([]) | length > 0
+  block:
+    - name: "Add custom configuration files"
+      ansible.builtin.template:
+        src: "custom.conf.j2"
+        dest: "/etc/rsyslog.d/{{ item.name if item.name.endswith('.conf') else item.name ~ '.conf' }}"
+        owner: "{{ rsyslog_user }}"
+        group: "{{ rsyslog_group }}"
+        mode: "0640"
+        backup: true
+      become: true
+      loop: "{{ rsyslog_d_custom }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: __rsyslog_d_custom_deployed
+      notify: Restart rsyslog
+
+    - name: "Validate full configuration syntax"
+      ansible.builtin.command: "rsyslogd -N1"
+      changed_when: false
+      register: __rsyslog_conf_check
+      # rsyslogd -N1 exits 1 on ANY diagnostic output, including harmless
+      # warnings (e.g. "imfile: no files configured to be monitored" when no
+      # input() is defined yet). Only fail on actual parse/config errors,
+      # identifiable by the "rsyslogd: error" prefix rsyslog itself uses.
+      failed_when: __rsyslog_conf_check.stderr is search('(?i)rsyslogd:\\s*error')
+  rescue:
+    - name: "Rollback custom fragments to previous state (validation failed)"
+      ansible.builtin.copy:
+        src: "{{ item.backup_file }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ rsyslog_user }}"
+        group: "{{ rsyslog_group }}"
+        mode: "0640"
+        remote_src: true
+      loop: "{{ __rsyslog_d_custom_deployed.results | selectattr('backup_file', 'defined') | list }}"
+      loop_control:
+        label: "{{ item.dest }}"
+
+    - name: "Remove newly created fragments that have no previous backup (validation failed)"
+      ansible.builtin.file:
+        path: "{{ item.dest }}"
+        state: absent
+      loop: "{{ __rsyslog_d_custom_deployed.results | rejectattr('backup_file', 'defined') | selectattr('changed', 'defined') | selectattr('changed') | list }}"
+      loop_control:
+        label: "{{ item.dest }}"
+
+    - name: "Fail loudly after rollback"
+      ansible.builtin.fail:
+        msg: >-
+          One or more rsyslog_d_custom fragments failed validation (see
+          rsyslogd -N1 output above) and were rolled back / removed to
+          restore the last known-good configuration.

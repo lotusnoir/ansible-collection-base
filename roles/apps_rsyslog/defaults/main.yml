@@ -1,22 +1,21 @@
 ---
 rsyslog_user: root
-rsyslog_group: adm
+rsyslog_group: "{{ 'adm' if ansible_facts.os_family == 'Debian' else 'root' }}"
 
 # Main rsyslog.conf
 rsyslog_working_dir: "/var/spool/rsyslog"
 
 rsyslog_modules_conf: |
   module(load="imuxsock")
-  module(load="imklog" permitnonkernelfacility="on")
-  module(load="imfile")
+  module(load="imklog")
 
 rsyslog_global_conf: |
   $ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
   $RepeatedMsgReduction on
-  $FileOwner root
-  $FileGroup adm
+  $FileOwner {{ rsyslog_user }}
+  $FileGroup {{ rsyslog_group }}
   $FileCreateMode 0640
-  $DirCreateMode 2755
+  $DirCreateMode 0755
   $Umask 0022
   #$PrivDropToUser root
   #$PrivDropToGroup adm

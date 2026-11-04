@@ -4,6 +4,9 @@
 #### MODULES ####
 #################
 {{ rsyslog_modules_conf }}
+{% if rsyslog_d_custom | default([]) | length > 0 %}
+module(load="imfile")
+{% endif %}
 
 ###########################
 #### GLOBAL DIRECTIVES ####

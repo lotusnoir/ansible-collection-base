@@ -14,3 +14,25 @@
           ansible.builtin.assert:
             that:
               - "'rsyslog' in ansible_facts.packages"
+
+        - name: Collect services as facts
+          ansible.builtin.service_facts:
+
+        - name: Check service is running
+          ansible.builtin.assert:
+            that:
+              - "ansible_facts.services['rsyslog.service'].state == 'running'"
+
+        - name: "Check if service is runned by good user"
+          ansible.builtin.command: "pgrep -u root -f rsyslog"
+          register: process_check
+          retries: 10
+          delay: 2
+          until: process_check.rc == 0
+          ignore_errors: true
+          changed_when: false
+
+        - name: Validate process running as correct user
+          ansible.builtin.assert:
+            that: process_check.rc == 0
+            fail_msg: "rsyslog is not running as root user"

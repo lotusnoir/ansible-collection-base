@@ -1,5 +1,15 @@
 ---
 - name: "Restart rsyslog"
-  ansible.builtin.service:
+  ansible.builtin.systemd_service:
     name: rsyslog
     state: restarted
+  become: true
+  register: __rsyslog_restart
+  notify: "Verify rsyslog is running"
+
+- name: "Verify rsyslog is running"
+  ansible.builtin.systemd_service:
+    name: rsyslog
+  become: true
+  register: __rsyslog_status
+  failed_when: __rsyslog_status.status.ActiveState != "active"

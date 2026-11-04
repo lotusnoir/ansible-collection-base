@@ -1,9 +1,17 @@
 ---
-- name: "Check for binary"
-  ansible.builtin.stat:
-    path: /usr/sbin/chronyd
-  changed_when: false
-  register: __installed_bin
+- name: "Assert OS-specific variables are defined"
+  ansible.builtin.assert:
+    that:
+      - _chrony_config is defined
+      - _chrony_service is defined
+      - _chrony_keyfile is defined
+      - _chrony_env_file is defined
+      - _chrony_env_var is defined
+    fail_msg: >-
+      One or more OS-specific variables (_chrony_config, _chrony_service,
+      _chrony_keyfile, _chrony_env_file, _chrony_env_var) are undefined.
+      This usually means vars/{{ ansible_facts.distribution | lower }}.yml
+      (or an equivalent os_family file) was not found/loaded for this OS.
 
 - name: "Install Chrony"
   ansible.builtin.package:
@@ -14,7 +22,11 @@
   retries: 12
   delay: 10
   until: __pkg_result is success
-  when: (not __installed_bin.stat.exists) or chrony_install_force
+  # Previously gated behind "when chronyd binary is not already present",
+  # which meant package updates (e.g. bumping chrony version via repo
+  # config) were silently skipped forever after the first install.
+  # ansible.builtin.package is already idempotent, so just always run it;
+  # chrony_install_force is no longer needed for this purpose.
 
 - name: "Ensure log directories exist"
   ansible.builtin.file:
@@ -44,10 +56,10 @@
   notify:
     - "Restart chrony"
 
-- name: "Configuring Chrony default daemon opts"
+- name: "Configuring Chrony daemon options"
   ansible.builtin.template:
-    src: chrony.default.j2
-    dest: "/etc/default/chrony"
+    src: chrony.env.j2
+    dest: "{{ _chrony_env_file }}"
     owner: "{{ chrony_user }}"
     group: "{{ chrony_group }}"
     mode: "0644"
@@ -55,6 +67,10 @@
   become: true
   notify:
     - "Restart chrony"
+  # Fixed: previously hardcoded to Debian's /etc/default/chrony with
+  # DAEMON_OPTS= syntax regardless of OS, so chrony_daemon_opts silently
+  # had no effect on RHEL-family hosts (which read OPTIONS= from
+  # /etc/sysconfig/chronyd instead). Now OS-aware via vars/*.yml.
 
 - name: "Apply configuration immediately to validate it"  # noqa: no-handler
   ansible.builtin.meta: flush_handlers
@@ -76,7 +92,8 @@
   when:
     - __chrony_config.changed
     - __chrony_config.backup_file is defined
-    - ansible_facts.services[_chrony_service ~ '.service'].state | default('') != 'running'
+    - (_chrony_service ~ '.service') not in ansible_facts.services
+      or ansible_facts.services[_chrony_service ~ '.service'].state | default('') != 'running'
 
 - name: "Restart chrony with the restored configuration"
   ansible.builtin.service:
@@ -86,7 +103,8 @@
   when:
     - __chrony_config.changed
     - __chrony_config.backup_file is defined
-    - ansible_facts.services[_chrony_service ~ '.service'].state | default('') != 'running'
+    - (_chrony_service ~ '.service') not in ansible_facts.services
+      or ansible_facts.services[_chrony_service ~ '.service'].state | default('') != 'running'
 
 - name: "Fail if the configuration was invalid"
   ansible.builtin.fail:
@@ -98,7 +116,8 @@
       else ' (no backup was available: chrony_backup_files is false)' }}.
   when:
     - __chrony_config.changed
-    - ansible_facts.services[_chrony_service ~ '.service'].state | default('') != 'running'
+    - (_chrony_service ~ '.service') not in ansible_facts.services
+      or ansible_facts.services[_chrony_service ~ '.service'].state | default('') != 'running'
 
 - name: "Apply systemd hardening"
   ansible.builtin.include_tasks: hardening.yml
