@@ -1,0 +1,7 @@
+---
+collections:
+roles:
+  - name: lotusnoir.apps_chrony
+    src: https://github.com/lotusnoir/ansible-apps_chrony.git
+    scm: git
+    version: main

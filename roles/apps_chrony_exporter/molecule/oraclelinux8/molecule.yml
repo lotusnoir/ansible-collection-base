@@ -11,6 +11,7 @@ driver:
 scenario:
   name: oraclelinux8
   test_sequence:
+    - dependency
     - cleanup
     - destroy
     - syntax

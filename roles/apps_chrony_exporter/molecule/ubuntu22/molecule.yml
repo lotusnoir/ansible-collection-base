@@ -11,6 +11,7 @@ driver:
 scenario:
   name: ubuntu22
   test_sequence:
+    - dependency
     - cleanup
     - destroy
     - syntax

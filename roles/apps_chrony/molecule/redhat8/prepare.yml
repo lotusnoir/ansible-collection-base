@@ -20,3 +20,28 @@
         state: started
         enabled: true
       when: ansible_facts.os_family == 'RedHat' and (ansible_facts.distribution_major_version | int) >= 9
+
+    - name: Ensure chrony override directory exists
+      ansible.builtin.file:
+        path: /etc/systemd/system/chrony.service.d
+        state: directory
+        mode: "0755"
+      when:
+        - ansible_facts.distribution == 'Ubuntu'
+        - ansible_facts.distribution_major_version == '26'
+
+    - name: Clear ConditionVirtualization so chrony can start inside the test container
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/chrony.service.d/override.conf
+        mode: "0644"
+        content: |
+          [Unit]
+          ConditionVirtualization=
+
+          [Service]
+          Type=simple
+          NotifyAccess=
+          UnsetEnvironment=NOTIFY_SOCKET
+      when:
+        - ansible_facts.distribution == 'Ubuntu'
+        - ansible_facts.distribution_major_version == '26'

@@ -1,15 +1,20 @@
 ---
-- name: "Creating user group"
+- name: "Creating dedicated group for chrony_exporter"
   ansible.builtin.group:
     name: "{{ chrony_exporter_group }}"
     state: present
   become: true
 
-- name: "Creating user"
+- name: "Creating dedicated user for chrony_exporter"
   ansible.builtin.user:
-    createhome: false
-    group: "{{ chrony_exporter_group }}"
     name: "{{ chrony_exporter_user }}"
-    shell: /bin/false
+    group: "{{ chrony_exporter_group }}"
+    groups: "{{ [chrony_exporter_chrony_group] if __chrony_group_lookup.ansible_facts.getent_group is defined else [] }}"
+    append: true
+    createhome: false
+    shell: /usr/sbin/nologin
     system: true
   become: true
+  # __chrony_group_lookup is set once in install.yml (runs on every
+  # converge), so it's always defined here regardless of whether this
+  # install block actually triggers a reinstall.

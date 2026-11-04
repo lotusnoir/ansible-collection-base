@@ -10,8 +10,20 @@ chrony_exporter_verify_checksum: true
 chrony_exporter_install_dir: "/usr/local/bin"
 chrony_exporter_bin_name: "chrony_exporter"
 chrony_exporter_arch: "{{ _chrony_exporter_arch_map[ansible_facts.architecture] | default(ansible_facts.architecture, true) }}"
-chrony_exporter_group: "{% if ansible_facts.os_family == 'RedHat' %}chrony{% else %}_chrony{% endif %}"
-chrony_exporter_user: "{% if ansible_facts.os_family == 'RedHat' %}chrony{% else %}_chrony{% endif %}"
+
+# Dedicated system account for the exporter process itself. Previously this
+# defaulted to the chrony daemon's own account (chrony/_chrony), which meant
+# this role would create/manage that account directly — a resource it
+# doesn't own (the chrony package does). The exporter now runs as its own
+# account and instead joins the chrony group as a supplementary group, so
+# it can read the control socket without touching the daemon's account.
+chrony_exporter_user: "chrony_exporter"
+chrony_exporter_group: "chrony_exporter"
+
+# Group added as a supplementary group to chrony_exporter_user, giving read
+# access to the chronyd control socket. Matches the actual chrony daemon
+# group per OS family; override if your chrony install uses something else.
+chrony_exporter_chrony_group: "{% if ansible_facts.os_family == 'RedHat' %}chrony{% else %}_chrony{% endif %}"
 
 chrony_exporter_version: "latest"
 chrony_exporter_distrib: "linux"

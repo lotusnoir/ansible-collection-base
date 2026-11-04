@@ -5,6 +5,27 @@
   changed_when: false
   register: __installed_bin
 
+- name: "Check if the chrony daemon group exists"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ chrony_exporter_chrony_group }}"
+  failed_when: false
+  register: __chrony_group_lookup
+  # Evaluated on every run (not just install/upgrade), so the fact is
+  # always available below when rendering the systemd unit — otherwise a
+  # converge that skips the install block (already up to date) would leave
+  # this undefined and crash the template render.
+
+- name: "Warn if the chrony daemon group is missing"
+  ansible.builtin.debug:
+    msg: >-
+      Group '{{ chrony_exporter_chrony_group }}' does not exist — chrony
+      does not appear to be installed on this host. chrony_exporter will be
+      installed/configured without the SupplementaryGroups membership, so
+      it won't be able to reach the chronyd control socket until chrony is
+      installed and this role is re-run.
+  when: __chrony_group_lookup.ansible_facts.getent_group is not defined
+
 - name: "Sources install tasks"
   ansible.builtin.include_tasks: install_src.yml
   when: chrony_exporter_install_method == "src"
@@ -16,6 +37,8 @@
     owner: "root"
     group: "root"
     mode: "0644"
+  vars:
+    _chrony_exporter_group_exists: "{{ __chrony_group_lookup.ansible_facts.getent_group is defined }}"
   notify: "Restart chrony_exporter"
   register: __config_systemd
 

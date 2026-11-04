@@ -8,6 +8,9 @@ Wants=network-online.target
 [Service]
 User={{ chrony_exporter_user }}
 Group={{ chrony_exporter_group }}
+{% if _chrony_exporter_group_exists %}
+SupplementaryGroups={{ chrony_exporter_chrony_group }}
+{% endif %}
 ExecStart={{ chrony_exporter_install_dir }}/{{ chrony_exporter_bin_name }} \
           --chrony.address={{ chrony_exporter_chrony_address }} \
           --web.listen-address={{ chrony_exporter_web_listen }}:{{ chrony_exporter_web_port }} \

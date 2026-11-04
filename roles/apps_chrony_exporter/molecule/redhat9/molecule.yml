@@ -11,6 +11,7 @@ driver:
 scenario:
   name: redhat9
   test_sequence:
+    - dependency
     - cleanup
     - destroy
     - syntax

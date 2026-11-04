@@ -2,12 +2,18 @@
 - name: "Get current version"
   ansible.builtin.shell: |
     set -o pipefail
-    {{ chrony_exporter_install_dir }}/{{ chrony_exporter_bin_name }} --version 2>&1 | grep -oP 'version \K[0-9.]+' | head -1
+    {{ chrony_exporter_install_dir }}/{{ chrony_exporter_bin_name }} --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1
   args:
     executable: /bin/bash
   changed_when: false
   register: __installed_version
   when: __installed_bin.stat.exists
+  # Switched from "grep -oP" (PCRE) to "grep -oE" (POSIX ERE): -P requires
+  # grep built with PCRE support, which is missing on some minimal/busybox
+  # images. On those, -P silently matched nothing rather than erroring,
+  # making the version check always look "different" and forcing a
+  # reinstall on every single run. -E is supported everywhere GNU/BSD grep
+  # ships.
 
 - name: "Get latest tag"
   ansible.builtin.uri:
