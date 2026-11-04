@@ -1,0 +1,22 @@
+---
+- name: "DEBIAN | Install requirement"
+  ansible.builtin.package:
+    name: "{{ network_packages }}"
+    state: present
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
+  when: ansible_facts.os_family == 'Debian'
+
+- name: "Add interfaces alias ips"
+  ansible.builtin.template:
+    src: interfaces_alias.j2
+    dest: /etc/network/interfaces.d/interfaces_alias
+    owner: root
+    group: root
+    mode: '0644'
+  notify: "Restart interfaces alias"
+  when:
+    - interfaces_alias_ips is defined
+    - interfaces_alias_ips | length > 0

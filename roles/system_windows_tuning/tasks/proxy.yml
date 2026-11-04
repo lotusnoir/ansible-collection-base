@@ -13,3 +13,4 @@
   community.windows.win_inet_proxy:
     auto_detect: false
     proxy: "{{ windows_tuning_proxy }}"
+    bypass: "{{ windows_tuning_no_proxy.split(',') }}"

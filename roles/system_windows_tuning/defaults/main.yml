@@ -2,6 +2,7 @@
 ### Proxy settings
 windows_tuning_set_proxy: false
 windows_tuning_proxy: "{{ http_proxy }}"
+windows_tuning_no_proxy: "localhost,127.0.0.1,*.internal.corp,10.*"
 
 ### system settings
 windows_tuning_customize: false

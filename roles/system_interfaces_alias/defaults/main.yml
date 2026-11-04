@@ -1,0 +1,5 @@
+---
+#by default its attached to the default ipv4 interfaces
+interfaces_alias_ips: []
+#  - {address: 10.64.36.28, netmask: 255.255.255.0}
+#  - {address: 10.65.36.25, netmask: 255.255.255.0, interface: "ens224"}

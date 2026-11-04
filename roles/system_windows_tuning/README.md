@@ -38,7 +38,7 @@ See [variables](/defaults/main.yml) for more details.
           become_method: sudo
           gather_facts: true
           roles:
-            - role: ansible-system_windows_tuning
+            - role: ansible-system_windows_tuning or lotusnoir.base.system_windows_tuning
 
 ## License
 

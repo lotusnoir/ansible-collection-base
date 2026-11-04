@@ -1,0 +1,7 @@
+---
+- name: "Restart interfaces alias"
+  ansible.builtin.shell: "ifdown {{ item.interface | default(ansible_default_ipv4.interface) }}:{{ ansible_loop.index }}; sleep 1; ifup {{ item.interface | default(ansible_default_ipv4.interface) }}:{{ ansible_loop.index }}"
+  changed_when: false
+  loop: "{{ interfaces_alias_ips }}"
+  loop_control:
+    extended: 'yes'
