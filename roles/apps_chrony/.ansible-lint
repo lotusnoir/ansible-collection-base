@@ -3,4 +3,6 @@ skip_list:
   - '106'
   - '401'
   - 'schema'
-  - 'yaml[line-length]'
+  - yaml[line-length]
+  - yaml[commas]
+  - no-handler

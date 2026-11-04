@@ -1,0 +1,4 @@
+{{ ansible_managed | comment }}
+{% for k in chrony_keys %}
+{{ k.id }} {{ k.hashtype | default('SHA256') }} {{ k.key }}
+{% endfor %}

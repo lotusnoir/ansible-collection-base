@@ -5,29 +5,31 @@
   changed_when: false
   register: __installed_bin
 
-- name: "Install tasks"
+- name: "Install Chrony"
+  ansible.builtin.package:
+    name: chrony
+    state: present
+  become: true
+  register: __pkg_result
+  retries: 12
+  delay: 10
+  until: __pkg_result is success
   when: (not __installed_bin.stat.exists) or chrony_install_force
-  block:
-    - name: "Install Chrony"
-      ansible.builtin.package:
-        name: chrony
-        state: present
-      become: true
-      register: __pkg_result
-      retries: 12
-      delay: 10
-      until: __pkg_result is success
 
-    - name: "Ensure log directories exist"
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: directory
-        owner: "{{ chrony_user }}"
-        group: "{{ chrony_group }}"
-        mode: "2755"
-      become: true
-      loop:
-        - "{{ chrony_logdir }}"
+- name: "Ensure log directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ chrony_user }}"
+    group: "{{ chrony_group }}"
+    mode: "0750"
+  become: true
+  loop:
+    - "{{ chrony_logdir }}"
+
+- name: "Deploy keyfile"
+  ansible.builtin.include_tasks: keyfile.yml
+  when: chrony_keyfile_enabled
 
 - name: "Configuring Chrony"
   ansible.builtin.template:
@@ -38,6 +40,7 @@
     mode: "0644"
     backup: "{{ chrony_backup_files }}"
   become: true
+  register: __chrony_config
   notify:
     - "Restart chrony"
 
@@ -52,3 +55,53 @@
   become: true
   notify:
     - "Restart chrony"
+
+- name: "Apply configuration immediately to validate it"  # noqa: no-handler
+  ansible.builtin.meta: flush_handlers
+  when: __chrony_config.changed
+
+- name: "Collect service state after restart"
+  ansible.builtin.service_facts:
+  when: __chrony_config.changed
+
+- name: "Restore previous configuration if the service failed to start"
+  ansible.builtin.copy:
+    src: "{{ __chrony_config.backup_file }}"
+    dest: "{{ _chrony_config }}"
+    owner: "{{ chrony_user }}"
+    group: "{{ chrony_group }}"
+    mode: "0644"
+    remote_src: true
+  become: true
+  when:
+    - __chrony_config.changed
+    - __chrony_config.backup_file is defined
+    - ansible_facts.services[_chrony_service ~ '.service'].state | default('') != 'running'
+
+- name: "Restart chrony with the restored configuration"
+  ansible.builtin.service:
+    name: "{{ _chrony_service }}"
+    state: restarted
+  become: true
+  when:
+    - __chrony_config.changed
+    - __chrony_config.backup_file is defined
+    - ansible_facts.services[_chrony_service ~ '.service'].state | default('') != 'running'
+
+- name: "Fail if the configuration was invalid"
+  ansible.builtin.fail:
+    msg: >-
+      {{ _chrony_service }}.service failed to start with the new
+      configuration (see 'journalctl -u {{ _chrony_service }}' on the
+      target). The previous configuration has been restored{{
+      ', from ' + __chrony_config.backup_file if __chrony_config.backup_file is defined
+      else ' (no backup was available: chrony_backup_files is false)' }}.
+  when:
+    - __chrony_config.changed
+    - ansible_facts.services[_chrony_service ~ '.service'].state | default('') != 'running'
+
+- name: "Apply systemd hardening"
+  ansible.builtin.include_tasks: hardening.yml
+  when:
+    - ansible_facts.env.container | default('') | length == 0
+    - ansible_facts.virtualization_type | default('NA') not in ['docker', 'lxc', 'container', 'podman']

@@ -2,7 +2,7 @@
 galaxy_info:
   author: lotusnoir
   role_name: apps_rsyslog_exporter
-  description: "Install and configure [rsyslog_exporter](https://github.com/momorientes/rsyslog_exporter) to expose metrics for prometheus"
+  description: "Install and configure [rsyslog_exporter](https://github.com/prometheus-community/rsyslog_exporter) to expose rsyslog impstats metrics for Prometheus."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
@@ -15,25 +15,25 @@ galaxy_info:
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
+        - "buster"
         - "trixie"
     - name: "Rocky"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "OracleLinux"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "RedHat"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
 
   galaxy_tags:
     - prometheus

@@ -16,6 +16,19 @@ Restart=always
 SyslogIdentifier=consul_exporter
 RestartSec=1
 PrivateTmp=yes
+{% if consul_exporter_systemd_hardening | default(true) %}
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+{% endif %}
 
 [Install]
 WantedBy=multi-user.target

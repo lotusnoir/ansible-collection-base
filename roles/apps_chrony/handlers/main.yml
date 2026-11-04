@@ -1,4 +1,9 @@
 ---
+- name: "Reload systemd daemon"
+  ansible.builtin.systemd:
+    daemon_reload: true
+  become: true
+
 - name: "Restart chrony"
   ansible.builtin.service:
     name: "{{ _chrony_service }}"

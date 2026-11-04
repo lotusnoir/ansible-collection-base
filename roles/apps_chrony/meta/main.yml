@@ -2,7 +2,7 @@
 galaxy_info:
   author: lotusnoir
   role_name: apps_chrony
-  description: "Chrony continuously measures clock offset and network delay, selects the most reliable sources, and adjusts the system clock."
+  description: "Chrony continuously measures clock offset and network delay, selects the most reliable time sources, and adjusts the system clock. This role installs chrony from the OS package manager and manages its configuration (`chrony.conf`) and daemon options (`/etc/default/chrony`)."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
@@ -15,29 +15,32 @@ galaxy_info:
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
+        - "buster"
         - "trixie"
     - name: "Rocky"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "OracleLinux"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "RedHat"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
 
   galaxy_tags:
     - system
     - time
     - chrony
+    - ntp
+    - security
+    - sync
 
 dependencies: []

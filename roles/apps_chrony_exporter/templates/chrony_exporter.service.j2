@@ -2,6 +2,8 @@
 
 [Unit]
 Description=Prometheus chrony exporter
+After=network-online.target chronyd.service
+Wants=network-online.target
 
 [Service]
 User={{ chrony_exporter_user }}
@@ -10,18 +12,29 @@ ExecStart={{ chrony_exporter_install_dir }}/{{ chrony_exporter_bin_name }} \
           --chrony.address={{ chrony_exporter_chrony_address }} \
           --web.listen-address={{ chrony_exporter_web_listen }}:{{ chrony_exporter_web_port }} \
           --log.level={{ chrony_exporter_loglevel }} \
-{% if chrony_exporter_collector_sources is sameas true %}          --collector.sources \
-{% else %}           --no-collector.sources \
+{% if chrony_exporter_collector_sources is sameas true %}
+          --collector.sources \
+{% else %}
+          --no-collector.sources \
 {% endif %}
-{% if chrony_exporter_collector_serverstats is sameas true %}          --collector.serverstats \
-{% else %}           --no-collector.serverstats \
+{% if chrony_exporter_collector_serverstats is sameas true %}
+          --collector.serverstats \
+{% else %}
+          --no-collector.serverstats \
 {% endif %}
-{% if chrony_exporter_collector_tracking is sameas true %}          --collector.tracking \
-{% else %}           --no-collector.tracking \
+{% if chrony_exporter_collector_tracking is sameas true %}
+          --collector.tracking \
+{% else %}
+          --no-collector.tracking \
 {% endif %}
-{% if chrony_exporter_collector_dns_lookup is sameas true %}          --collector.dns-lookups
-{% else %}           --no-collector.dns-lookups
+{% if chrony_exporter_collector_dns_lookup is sameas true %}
+          --collector.dns-lookups{{ ' \\' if chrony_exporter_extra_args | length > 0 else '' }}
+{% else %}
+          --no-collector.dns-lookups{{ ' \\' if chrony_exporter_extra_args | length > 0 else '' }}
 {% endif %}
+{% for arg in chrony_exporter_extra_args %}
+          {{ arg }}{{ ' \\' if not loop.last else '' }}
+{% endfor %}
 
 AmbientCapabilities=
 CapabilityBoundingSet=
@@ -43,11 +56,14 @@ SystemCallArchitectures=native
 
 ExecReload=/bin/kill -HUP $MAINPID
 SyslogIdentifier=chrony_exporter
+Restart=on-failure
 RestartSec=1
+{% if chrony_exporter_chrony_socket_dir | default('', true) | length > 0 %}
 
-#PrivateTmp=yes
-#ReadWritePaths=/run/chrony
-#BindPaths=/run/chrony
+PrivateTmp=yes
+ReadWritePaths=-{{ chrony_exporter_chrony_socket_dir }}
+BindPaths=-{{ chrony_exporter_chrony_socket_dir }}
+{% endif %}
 
 [Install]
 WantedBy=multi-user.target

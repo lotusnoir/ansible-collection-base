@@ -5,10 +5,11 @@ chrony_exporter_install_origin: internet  # or local
 chrony_exporter_dl_executor: host  # or localhost
 chrony_exporter_install_force: false
 chrony_exporter_start_service: true
+chrony_exporter_verify_checksum: true
 
 chrony_exporter_install_dir: "/usr/local/bin"
 chrony_exporter_bin_name: "chrony_exporter"
-chrony_exporter_arch: "amd64"
+chrony_exporter_arch: "{{ _chrony_exporter_arch_map[ansible_facts.architecture] | default(ansible_facts.architecture, true) }}"
 chrony_exporter_group: "{% if ansible_facts.os_family == 'RedHat' %}chrony{% else %}_chrony{% endif %}"
 chrony_exporter_user: "{% if ansible_facts.os_family == 'RedHat' %}chrony{% else %}_chrony{% endif %}"
 
@@ -20,9 +21,15 @@ chrony_exporter_temp_dir: "/tmp"
 
 # if chrony_exporter_install_origin: local
 chrony_exporter_local_files: "~/Downloads/shared-files/{{ role_path | basename }}/{{ chrony_exporter_pkg_name }}"
+# sha256 (hex only, no "sha256:" prefix) to verify chrony_exporter_local_files against.
+# Required for checksum verification when chrony_exporter_install_origin is "local".
+chrony_exporter_local_checksum: ""
 
 ### Config
 chrony_exporter_chrony_address: "unix:///run/chrony/chronyd.sock"
+# Directory that must stay writable/reachable despite ProtectSystem=strict.
+# Set to "" to disable the ReadWritePaths/BindPaths/PrivateTmp hardening exceptions.
+chrony_exporter_chrony_socket_dir: "/run/chrony"
 chrony_exporter_web_listen: "0.0.0.0"
 chrony_exporter_web_port: "9101"
 chrony_exporter_loglevel: "info"
@@ -30,3 +37,5 @@ chrony_exporter_collector_sources: false
 chrony_exporter_collector_serverstats: false
 chrony_exporter_collector_tracking: true
 chrony_exporter_collector_dns_lookup: true
+# Extra raw CLI flags appended to ExecStart, e.g. ["--web.config.file=/etc/chrony_exporter/web.yml"]
+chrony_exporter_extra_args: []

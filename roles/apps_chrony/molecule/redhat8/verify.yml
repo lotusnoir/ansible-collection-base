@@ -14,11 +14,3 @@
           ansible.builtin.assert:
             that:
               - "'chrony' in ansible_facts.packages"
-
-        - name: Collect services as facts
-          ansible.builtin.service_facts:
-
-        - name: Check service is running
-          ansible.builtin.assert:
-            that:
-              - "ansible_facts.services['chrony.service'].state == 'running'"

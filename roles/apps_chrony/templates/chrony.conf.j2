@@ -43,6 +43,12 @@ dumponexit
 {% if chrony_local_stratum is defined and chrony_local_stratum > 0 %}
 local stratum {{ chrony_local_stratum }}
 {% endif %}
+{% if chrony_minsources is defined and chrony_minsources > 0 %}
+minsources {{ chrony_minsources }}
+{% endif %}
+{% if chrony_cmdport is defined %}
+cmdport {{ chrony_cmdport }}
+{% endif %}
 
 ##################################
 # Logs

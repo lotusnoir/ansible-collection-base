@@ -16,9 +16,12 @@
             that:
               - "ansible_facts.services['consul_exporter.service'].state == 'running'"
 
-        - name: Check if service is runned by good user
-          ansible.builtin.command: "pgrep -u consul_exporter consul_exporter"
+        - name: "Check if service is runned by good user"
+          ansible.builtin.command: "pgrep -u consul_exporter -f consul_exporter"
           register: process_check
+          retries: 10
+          delay: 2
+          until: process_check.rc == 0
           ignore_errors: true
           changed_when: false
 
@@ -27,15 +30,16 @@
             that: process_check.rc == 0
             fail_msg: "consul_exporter is not running as consul_exporter user"
 
-        - name: Collect ports as facts
-          community.general.listen_ports_facts:
-
-        - name: Check port is listening
-          ansible.builtin.assert:
-            that:
-              - "9106 in ansible_facts.tcp_listen | map(attribute='port')"
+        - name: Wait for port 9106 to be listening
+          ansible.builtin.wait_for:
+            port: 9106
+            timeout: 20
 
         - name: Check urls code
           ansible.builtin.uri:
-            url: http://localhost:9106/metrics
+            url: "http://localhost:9106/metrics"
             status_code: 200
+          register: __url_check
+          retries: 10
+          delay: 2
+          until: __url_check.status is defined and __url_check.status == 200

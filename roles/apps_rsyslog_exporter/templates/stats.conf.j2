@@ -4,7 +4,7 @@ module(load="omprog")
 
 module(
   load="impstats"
-  interval="60"
+  interval="{{ rsyslog_exporter_impstats_interval }}"
   format="json"
   resetCounters="off"
   ruleset="stats"

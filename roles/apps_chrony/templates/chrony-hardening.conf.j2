@@ -1,0 +1,12 @@
+{{ ansible_managed | comment }}
+
+[Service]
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictRealtime=true
+LockPersonality=true
+RemoveIPC=true

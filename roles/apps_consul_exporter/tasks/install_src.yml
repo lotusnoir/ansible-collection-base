@@ -12,11 +12,23 @@
 - name: "Get latest tag"
   ansible.builtin.uri:
     url: "{{ _consul_exporter_release_api_url }}"
+    headers: "{{ {'Authorization': 'token ' + lookup('env', 'GITHUB_TOKEN')} if lookup('env', 'GITHUB_TOKEN') else omit }}"
   failed_when: false
   register: __github_latest
   when:
     - consul_exporter_version == 'latest'
     - consul_exporter_install_origin == "internet"
+
+- name: "Warn if GitHub API call failed and falling back to default version"
+  ansible.builtin.debug:
+    msg: >-
+      Could not reach {{ _consul_exporter_release_api_url }} (possibly rate-limited).
+      Falling back to {{ _consul_exporter_default_version }}. Set GITHUB_TOKEN env var to
+      increase the GitHub API rate limit.
+  when:
+    - consul_exporter_version == 'latest'
+    - consul_exporter_install_origin == "internet"
+    - __github_latest.json is not defined or __github_latest.json.tag_name is not defined
 
 - name: "Replace version fact to latest"
   ansible.builtin.set_fact:
@@ -26,7 +38,11 @@
     - consul_exporter_install_origin == "internet"
 
 - name: "Install tasks"
-  when: (not __installed_bin.stat.exists) or (__installed_version is defined and consul_exporter_version not in __installed_version.stdout) or consul_exporter_install_force
+  when: >-
+    (not __installed_bin.stat.exists) or
+    (__installed_version is defined and __installed_version.stdout != "" and
+     (consul_exporter_version is version(__installed_version.stdout, '!=')))
+    or consul_exporter_install_force
   block:
     - name: "Create dirs"
       ansible.builtin.file:
@@ -52,13 +68,37 @@
       ansible.builtin.copy:
         src: "{{ consul_exporter_local_files }}"
         dest: "{{ consul_exporter_temp_dir }}/{{ consul_exporter_pkg_name }}"
-        mode: "0755"
+        mode: "0644"
       when: consul_exporter_install_origin == "local"
+
+    - name: "Fetch checksums file"
+      ansible.builtin.uri:
+        url: "{{ consul_exporter_checksums_url }}"
+        return_content: true
+      register: __checksums
+      failed_when: false
+      delegate_to: "{{ 'localhost' if consul_exporter_dl_executor == 'localhost' else omit }}"
+      when:
+        - consul_exporter_verify_checksum
+        - consul_exporter_install_origin == "internet"
+
+    - name: "Extract expected checksum for this package"
+      ansible.builtin.set_fact:
+        __consul_exporter_expected_sha256: >-
+          {{ (__checksums.content | default('')).splitlines()
+             | select('search', consul_exporter_pkg_name)
+             | map('regex_replace', '^([0-9a-f]+)\s.*$', '\1')
+             | first | default('') }}
+      when:
+        - consul_exporter_verify_checksum
+        - consul_exporter_install_origin == "internet"
+        - __checksums.content is defined
 
     - name: "Download binary by host"
       ansible.builtin.get_url:
         url: "{{ consul_exporter_dl_url }}"
         dest: "{{ consul_exporter_temp_dir }}/{{ consul_exporter_pkg_name }}"
+        checksum: "{{ 'sha256:' + __consul_exporter_expected_sha256 if (consul_exporter_verify_checksum and __consul_exporter_expected_sha256 is defined and __consul_exporter_expected_sha256 | length > 0) else omit }}"
         timeout: 60
         mode: "0644"
       when:
@@ -69,6 +109,7 @@
       ansible.builtin.get_url:
         url: "{{ consul_exporter_dl_url }}"
         dest: "{{ consul_exporter_temp_dir }}/{{ consul_exporter_pkg_name }}"
+        checksum: "{{ 'sha256:' + __consul_exporter_expected_sha256 if (consul_exporter_verify_checksum and __consul_exporter_expected_sha256 is defined and __consul_exporter_expected_sha256 | length > 0) else omit }}"
         timeout: 60
         mode: "0644"
       delegate_to: localhost
@@ -76,11 +117,11 @@
         - consul_exporter_install_origin == "internet"
         - consul_exporter_dl_executor == "localhost"
 
-    - name: "Copy local binary"
+    - name: "Copy downloaded archive from localhost to target host"
       ansible.builtin.copy:
         src: "{{ consul_exporter_temp_dir }}/{{ consul_exporter_pkg_name }}"
         dest: "{{ consul_exporter_temp_dir }}/{{ consul_exporter_pkg_name }}"
-        mode: "0755"
+        mode: "0644"
       when:
         - consul_exporter_install_origin == "internet"
         - consul_exporter_dl_executor == "localhost"
@@ -102,3 +143,12 @@
         group: "{{ consul_exporter_group }}"
         mode: "0755"
       notify: Restart consul_exporter
+
+    - name: "Clean up temp archive and extraction dir"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ consul_exporter_temp_dir }}/{{ consul_exporter_pkg_name }}"
+        - "{{ consul_exporter_temp_dir }}/{{ role_path | basename }}"
+      when: consul_exporter_cleanup_tmp

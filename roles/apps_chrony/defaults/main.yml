@@ -6,11 +6,11 @@ chrony_user: "{% if ansible_facts.os_family == 'RedHat' %}chrony{% else %}_chron
 chrony_backup_files: true
 
 ### Config
-chrony_allow_hosts: ""
+chrony_allow_hosts: []
   #  - 10.0.0.0/8
   #  - 192.168.0.0/16
   #  - 172.16.0.0/12
-chrony_deny_hosts: ""
+chrony_deny_hosts: []
 chrony_daemon_opts: "-F 1"
 chrony_dumpdir: "/var/lib/chrony"
 chrony_driftfile: "/var/lib/chrony/drift"
@@ -18,7 +18,25 @@ chrony_dumponexit: true
 # If set to 0 ignore stratum in source selection with variable stratumweight 0
 chrony_local_stratum: 0
 chrony_makestep: "1 -1"
+
+### Authentication (symmetric keys)
 chrony_keyfile_enabled: false
+# List of {id, key, hashtype} entries rendered into the keyfile.
+# hashtype defaults to SHA256. Example:
+#   chrony_keys:
+#     - id: 1
+#       hashtype: SHA256
+#       key: "a_long_random_secret"
+chrony_keys: []
+
+### Command port
+# Set to 0 to disable the command/monitoring port entirely (cmdport directive).
+chrony_cmdport: 323
+
+### Source corroboration hardening
+# Minimum number of sources that must agree before chrony considers the
+# selection trustworthy enough to step/slew the clock.
+chrony_minsources: 2
 
 chrony_noclientlog: true
 chrony_log:

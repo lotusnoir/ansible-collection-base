@@ -1,0 +1,21 @@
+---
+- name: "Create systemd drop-in directory for {{ _chrony_service }}"
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ _chrony_service }}.service.d"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+
+- name: "Deploy systemd hardening drop-in"
+  ansible.builtin.template:
+    src: chrony-hardening.conf.j2
+    dest: "/etc/systemd/system/{{ _chrony_service }}.service.d/hardening.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  notify:
+    - "Reload systemd daemon"
+    - "Restart chrony"

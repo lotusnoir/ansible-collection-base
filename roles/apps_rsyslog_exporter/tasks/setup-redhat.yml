@@ -8,8 +8,25 @@
   delay: 10
   until: __pkg_result is success
 
-- name: "Allow python execution and openning port"
-  ansible.builtin.shell: |
-    semanage port -a -t syslogd_port_t -p tcp "{{ rsyslog_exporter_web_port }}"
-  failed_when: false
+- name: "Check SELinux status"
+  ansible.builtin.command: getenforce
   changed_when: false
+  failed_when: false
+  register: __selinux_status
+
+- name: "Check if SELinux port mapping already exists"
+  ansible.builtin.shell: |
+    set -o pipefail
+    semanage port -l | grep -w "{{ rsyslog_exporter_web_port }}"
+  changed_when: false
+  failed_when: false
+  register: __semanage_port_check
+  when: __selinux_status.stdout in ['Enforcing', 'Permissive']
+
+- name: "Allow rsyslog_exporter port in SELinux"
+  ansible.builtin.command:
+    cmd: "semanage port -a -t syslogd_port_t -p tcp {{ rsyslog_exporter_web_port }}"
+  when:
+    - __selinux_status.stdout in ['Enforcing', 'Permissive']
+    - __semanage_port_check.rc != 0
+  changed_when: true

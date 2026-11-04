@@ -1,37 +1,38 @@
 ---
-# - name: "Get current version"
-#   ansible.builtin.shell: |
-#     set -o pipefail
-#     {{ rsyslog_exporter_install_dir }}/{{ rsyslog_exporter_bin_name }} --version 2>&1 | grep -oP 'version \K[0-9.]+' | head -1
-#   args:
-#     executable: /bin/bash
-#   changed_when: false
-#   register: __installed_version
-#   when: __installed_bin.stat.exists
-#
-# - name: "Get latest tag"
-#   ansible.builtin.uri:
-#     url: "{{ _rsyslog_exporter_release_api_url }}"
-#   failed_when: false
-#   register: __github_latest
-#   when:
-#     - rsyslog_exporter_version == 'latest'
-#     - rsyslog_exporter_install_origin == "internet"
-#
-# - name: "Replace version fact to latest"
-#   ansible.builtin.set_fact:
-#     rsyslog_exporter_version: "{{ __github_latest.json.tag_name | default(_rsyslog_exporter_default_version) | replace('v', '') }}"
-#   when:
-#     - rsyslog_exporter_version == 'latest'
-#     - rsyslog_exporter_install_origin == "internet"
+- name: "Get current version"
+  ansible.builtin.shell: |
+    set -o pipefail
+    {{ rsyslog_exporter_install_dir }}/{{ rsyslog_exporter_bin_name }} --version 2>&1 | grep -oP '[0-9]+\.[0-9]+\.[0-9]+' | head -1
+  args:
+    executable: /bin/bash
+  changed_when: false
+  failed_when: false
+  register: __installed_version
+  when: __installed_bin.stat.exists
+
+- name: "Get latest tag"
+  ansible.builtin.uri:
+    url: "{{ _rsyslog_exporter_release_api_url }}"
+    headers: "{{ {'Authorization': 'token ' + lookup('env', 'GITHUB_TOKEN')} if lookup('env', 'GITHUB_TOKEN') else omit }}"
+  failed_when: false
+  register: __github_latest
+  when:
+    - rsyslog_exporter_version == 'latest'
+    - rsyslog_exporter_install_origin == "internet"
+
+- name: "Replace version fact to latest"
+  ansible.builtin.set_fact:
+    rsyslog_exporter_version: "{{ __github_latest.json.tag_name | default(_rsyslog_exporter_default_version) | replace('v', '') }}"
+  when:
+    - rsyslog_exporter_version == 'latest'
+    - rsyslog_exporter_install_origin == "internet"
 
 - name: "Install tasks"
-  # when:
-  #  - not __installed_bin.stat.exists
-  #  - __installed_version is not defined
-  #    or rsyslog_exporter_version not in __installed_version.stdout
-  #    or rsyslog_exporter_install_force
-  when: (not __installed_bin.stat.exists) or rsyslog_exporter_install_force
+  when: >-
+    (not __installed_bin.stat.exists) or
+    (__installed_version is defined and __installed_version.stdout != "" and
+     (rsyslog_exporter_version is version(__installed_version.stdout, '!=')))
+    or rsyslog_exporter_install_force
   block:
     - name: "Create dirs"
       ansible.builtin.file:
@@ -58,7 +59,7 @@
       ansible.builtin.copy:
         src: "{{ rsyslog_exporter_local_files }}"
         dest: "{{ rsyslog_exporter_temp_dir }}/{{ rsyslog_exporter_pkg_name }}"
-        mode: "0755"
+        mode: "0644"
       when: rsyslog_exporter_install_origin == "local"
 
     - name: "Download binary by host"
@@ -90,11 +91,11 @@
         - rsyslog_exporter_install_origin == "internet"
         - rsyslog_exporter_dl_executor == "localhost"
 
-    - name: "Copy local binary"
+    - name: "Copy downloaded archive from localhost to target host"
       ansible.builtin.copy:
         src: "{{ rsyslog_exporter_temp_dir }}/{{ rsyslog_exporter_pkg_name }}"
         dest: "{{ rsyslog_exporter_temp_dir }}/{{ rsyslog_exporter_pkg_name }}"
-        mode: "0755"
+        mode: "0644"
       when:
         - rsyslog_exporter_install_origin == "internet"
         - rsyslog_exporter_dl_executor == "localhost"
@@ -112,7 +113,17 @@
         dest: "{{ rsyslog_exporter_install_dir }}/{{ rsyslog_exporter_bin_name }}"
         remote_src: true
         mode: "0755"
+      notify: "Restart rsyslog"
 
     - name: "Special auth for redhat distro"
       ansible.builtin.include_tasks: "setup-{{ ansible_facts.os_family | lower }}.yml"
       when: ansible_facts.os_family == "RedHat"
+
+    - name: "Clean up temp archive and extraction dir"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ rsyslog_exporter_temp_dir }}/{{ rsyslog_exporter_pkg_name }}"
+        - "{{ rsyslog_exporter_temp_dir }}/{{ role_path | basename }}"
+      when: rsyslog_exporter_cleanup_tmp

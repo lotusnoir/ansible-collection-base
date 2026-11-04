@@ -1,0 +1,19 @@
+---
+- name: "Assert chrony_keys is not empty when keyfile is enabled"
+  ansible.builtin.assert:
+    that:
+      - chrony_keys | length > 0
+    fail_msg: "chrony_keyfile_enabled is true but chrony_keys is empty — nothing to deploy."
+
+- name: "Deploy chrony keyfile"
+  ansible.builtin.template:
+    src: chrony.keys.j2
+    dest: "{{ _chrony_keyfile }}"
+    owner: "root"
+    group: "{{ chrony_group }}"
+    mode: "0640"
+    backup: "{{ chrony_backup_files }}"
+  become: true
+  no_log: true
+  notify:
+    - "Restart chrony"
