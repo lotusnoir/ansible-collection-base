@@ -20,3 +20,27 @@
         state: started
         enabled: true
       when: ansible_facts.os_family == 'RedHat' and (ansible_facts.distribution_major_version | int) >= 9
+
+    - name: Ensure chrony override directory exists
+      ansible.builtin.file:
+        path: /etc/systemd/system/rsyslog.service.d/
+        state: directory
+        mode: "0755"
+      when: ansible_facts.os_family == 'RedHat'
+
+    - name: "MOLECULE: Workaround rsyslog capng_apply failure in nested containers"
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/rsyslog.service.d/override.conf
+        content: |
+          [Service]
+          CapabilityBoundingSet=
+          NoNewPrivileges=no
+        mode: '0644'
+      when: ansible_facts.os_family == 'RedHat'
+
+    - name: "MOLECULE: Reload systemd after override"
+      ansible.builtin.systemd:
+        daemon_reload: true
+      when: ansible_facts.os_family == 'RedHat'
+  roles:
+    - role: lotusnoir.system_repo_epel

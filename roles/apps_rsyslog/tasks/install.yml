@@ -1,26 +1,4 @@
 ---
-# NOTE: package/file/systemd modules are already idempotent, so we no longer
-# gate the whole install block behind a "is rsyslog already installed" check.
-# This lets the role reconcile drift (workdir deleted, service stopped,
-# repo missing) on every run instead of only on the very first install.
-
-- name: "REDHAT: Add repository"
-  ansible.builtin.yum_repository:
-    name: rsyslog
-    description: "Adiscon RHEL-$releasever - local packages for $basearch"
-    baseurl: "http://rpms.adiscon.com/v8-stable-daily/rhel-$releasever/$basearch"
-    enabled: true
-    gpgcheck: true
-    gpgkey: "https://rpms.adiscon.com/RPM-GPG-KEY-Adiscon"
-    protect: true
-  become: true
-  # Previously this only matched ansible_facts.distribution == 'RedHat',
-  # which silently skipped Rocky/AlmaLinux/OracleLinux even though the
-  # README claims support for them via EPEL. os_family covers the whole
-  # RHEL family; adjust here if you need per-distro baseurls instead of
-  # the generic "rhel-$releasever" path.
-  when: ansible_facts.os_family == 'RedHat'
-
 - name: "Install rsyslog package"
   ansible.builtin.package:
     name: rsyslog

@@ -12,7 +12,6 @@ scenario:
   name: all
   test_sequence:
     - destroy
-    - dependency
     - create
     - prepare
     - converge

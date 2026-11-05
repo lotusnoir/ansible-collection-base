@@ -2,8 +2,7 @@
 dependency:
   name: galaxy
   options:
-    role-file: requirements.yml
-    requirements-file: ""   # suppress collection install entirely if unsupported by your molecule_plugins version
+    requirements-file: molecule/default/requirements.yml
 
 driver:
   name: docker

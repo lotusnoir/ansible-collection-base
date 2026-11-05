@@ -1,4 +1,7 @@
 ---
 collections:
 roles:
-  - src: lotusnoir.apps_rsyslog
+  - name: lotusnoir.apps_rsyslog
+    src: https://github.com/lotusnoir/ansible-apps_rsyslog.git
+    scm: git
+    version: main

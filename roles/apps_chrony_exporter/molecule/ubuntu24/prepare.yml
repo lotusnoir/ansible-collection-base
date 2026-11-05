@@ -20,6 +20,3 @@
         state: started
         enabled: true
       when: ansible_facts.os_family == 'RedHat' and (ansible_facts.distribution_major_version | int) >= 9
-
-  roles:
-    - role: lotusnoir.apps_chrony

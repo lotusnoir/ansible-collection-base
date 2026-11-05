@@ -1,4 +1,7 @@
 ---
 collections:
 roles:
-  - src: lotusnoir.system_repo_epel
+  - name: lotusnoir.system_repo_epel
+    src: https://github.com/lotusnoir/ansible-system_repo_epel.git
+    scm: git
+    version: main
