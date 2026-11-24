@@ -1,22 +1,20 @@
 ---
-- name: "Check for /etc/security/pwquality.conf"
-  ansible.builtin.stat:
-    path: "/etc/security/pwquality.conf"
-  register: pwquality_file
-  changed_when: false
-  when: extra_sec_pwquality_update | bool
-
 - name: "/etc/security/pwquality.conf"
   ansible.builtin.lineinfile:
+    create: true
     path: /etc/security/pwquality.conf
     regexp: "^{{ item }}"
     line: "{{ item }}"
+    mode: 420
     state: present
   with_items:
-    - "minlen = 14"
+    - "dcredit = -1"
+    - "lcredit = -1"
+    - "ocredit = -1"
+    - "ucredit = -1"
+    - "minlen = 16"
     - "minclass = 4"
   when:
-    - pwquality_file.stat.exists is defined
     - extra_sec_pwquality_update | bool
 
 - name: "Create crontab.allow if not exists"
@@ -52,6 +50,51 @@
     - /etc/issue
     - /etc/issue.net
   when: extra_sec_issue_update | bool
+
+- name: Set password encryption method to yescrypt
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: '^ENCRYPT_METHOD'
+    line: 'ENCRYPT_METHOD    YESCRYPT'
+    state: present
+
+- name: Ensure rounds=11 is set on pam_unix.so password line
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    backrefs: true
+    regexp: '^(password\s+\[success=\d+ default=ignore\]\s+pam_unix\.so(?:(?!rounds=).)*)$'
+    line: '\1 rounds=11'
+  when:
+    - ansible_facts['os_family'] == "Debian"
+
+- name: Get all local users from /etc/passwd
+  ansible.builtin.getent:
+    database: passwd
+    split: ':'
+
+- name: Create local_users variable from the getent output
+  ansible.builtin.set_fact:
+    local_users: '{{ ansible_facts.getent_passwd | dict2items }}'
+
+- name: Test for existence home directories to avoid creating them.
+  ansible.builtin.stat:
+    path: '{{ item.value[4] }}'
+  register: path_exists
+  loop: '{{ local_users }}'
+  when:
+    - item.value[1]|int >= 1000
+    - item.value[1]|int != 65534
+    - item.value[4] != "/"
+
+- name: Ensure interactive local users have proper permissions on their respective home directories
+  ansible.builtin.file:
+    path: '{{ item.0.value[4] }}'
+    mode: u-s,g-w-s,o=-
+    follow: false
+    recurse: true
+  loop: '{{ local_users | zip(path_exists.results) | list }}'
+  when:
+    - item.1.stat is defined and item.1.stat.exists
 
 - name: "Change log permissions"
   ansible.builtin.command: find /var/log -type f -exec chmod g-wx,o-rwx '{}' + -o -type d -exec chmod g-w,o-rwx '{}' +

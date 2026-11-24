@@ -4,62 +4,43 @@
     name: "{{ grub_packages }}"
     state: present
 
-# - name: "Check if /etc/default/grub exist"
-#   ansible.builtin.stat:
-#     path: /etc/default/grub
-#   register: grub_default
-#
-# - name: "Create /etc/default/grub"
-#   ansible.builtin.file:
-#     path: /etc/default/grub
-#     state: touch
-#     owner: root
-#     group: root
-#     mode: 0644
-#   when:
-#     - grub_default.stat.exists is defined
-#     - not grub_default.stat.exists
+- name: "Check if grub.cfg path exists"
+  ansible.builtin.stat:
+    path: "{{ grub_boot_path }}"
+  register: _grub_cfg_check
 
-- name: "Cleaning default file, remove all comments and empty lines"
-  ansible.builtin.lineinfile:
-    path: "{{ grub_default_path }}"
-    regexp: "{{ item }}"
-    state: absent
-  loop:
-    - "^#"
-    - "^$"
+- name: "Fallback to BIOS path if detected UEFI path does not exist"
+  ansible.builtin.set_fact:
+    grub_boot_path: "{{ _grub_cfg_path['bios'][ansible_facts.distribution] | default(_grub_cfg_path['bios']['default']) }}"
+    grub_boot_mode: "bios"
+  when: not _grub_cfg_check.stat.exists
 
-- name: "Set complete grub options"
-  ansible.builtin.lineinfile:
-    path: "{{ grub_default_path }}"
-    regexp: "^{{ item.name }}="
-    line: '{{ item.name }}="{{ item.value }}"'
-    # validate: "{{ _grub_validation[ansible_facts.distribution] | default(_grub_validation['default']) }} /etc/default/grub"
-    create: true
-    mode: "0664"
-  with_items: "{{ grub_options }}"
-  when:
-    - grub_options is defined
+- name: "Re-check grub.cfg path after potential fallback"
+  ansible.builtin.stat:
+    path: "{{ grub_boot_path }}"
+  register: _grub_cfg_check_final
+
+- name: "Warn if grub.cfg does not exist yet"
+  ansible.builtin.debug:
+    msg: >-
+      grub.cfg introuvable à {{ grub_boot_path }} (mode: {{ grub_boot_mode }}).
+      Il sera généré par le handler 'Update grub' en fin de rôle ;
+      la tâche de sécurisation des permissions sera ignorée ce run.
+  when: not _grub_cfg_check_final.stat.exists
+
+- name: "Deploy /etc/default/grub from template"
+  ansible.builtin.template:
+    src: grub.j2
+    dest: "{{ grub_default_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+    validate: "{{ _grub_default_validation }} %s"
   notify:
     - Update grub
 
-- name: "Add options to existing GRUB_CMDLINE_LINUX"
-  ansible.builtin.replace:
-    path: "{{ grub_default_path }}"
-    regexp: '^GRUB_CMDLINE_LINUX="((:?(?!{{ item.option }}={{ item.value }}).)*?)"$'
-    replace: 'GRUB_CMDLINE_LINUX="\1 {{ item.option }}={{ item.value }}"'
-    validate: /bin/sh %s
-    mode: "0664"
-  loop: "{{ grub_add_cmdline }}"
-  loop_control:
-    label: "{{ item.option }}"
-  when:
-    - grub_add_cmdline is defined
-    - grub_add_cmdline | length > 0
-  notify:
-    - Update grub
-
-- name: "Add content on grud.d config files"
+- name: "Add content on grub.d config files"
   ansible.builtin.blockinfile:
     path: "/etc/grub.d/{{ item.file }}"
     block: "{{ item.value }}"
@@ -74,19 +55,20 @@
   notify:
     - Update grub
 
-- name: "Change content on grud.d config files"
+- name: "Change content on grub.d config files"
   ansible.builtin.replace:
     path: "/etc/grub.d/{{ item.file }}"
     regexp: "{{ item.regex }}"
     replace: "{{ item.value }}"
-  notify:
-    - Update grub
+    backup: true
   with_items:
     - "{{ grub_add_filed }}"
   when:
     - grub_add_filed is defined
     - grub_add_filed | length > 0
     - item.regex is defined
+  notify:
+    - Update grub
 
 - name: "Securise Grub bootloader"
   ansible.builtin.file:
@@ -94,7 +76,9 @@
     owner: root
     group: root
     mode: "0600"
-  when: grub_sec_bootloader|bool
+  when:
+    - grub_sec_bootloader | bool
+    - _grub_cfg_check_final.stat.exists
 
 - name: "Flush handlers"
   ansible.builtin.meta: flush_handlers

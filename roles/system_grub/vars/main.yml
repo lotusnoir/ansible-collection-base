@@ -6,19 +6,24 @@ _grub_packages:
     - grub
   Debian:
     - grub2
-
 grub_packages: "{{ _grub_packages[ansible_facts.os_family] | default(_grub_packages['default']) }}"
 
-_grub_update_grub_command:
-  default: grub2-mkconfig -o /boot/grub2/grub.cfg
-  Alpine: grub-mkconfig -o /boot/grub/grub.cfg
-  Debian: update-grub
+_grub_default_validation: "/bin/sh -n"
 
-grub_update_grub_command: "{{ _grub_update_grub_command[ansible_facts.os_family] | default(_grub_update_grub_command['default']) }}"
-# _grub_validation:
-#   default:
-#     - grub-script-check
-#   OracleLinux:
-#     - grub2-script-check
-#   Debian:
-#     - grub-script-check
+_grub_cfg_path:
+  bios:
+    Debian: "/boot/grub/grub.cfg"
+    Ubuntu: "/boot/grub/grub.cfg"
+    RedHat: "/boot/grub2/grub.cfg"
+    default: "/boot/grub/grub.cfg"
+  uefi:
+    Debian: "/boot/efi/EFI/debian/grub.cfg"
+    Ubuntu: "/boot/efi/EFI/ubuntu/grub.cfg"
+    RedHat: "/boot/efi/EFI/redhat/grub.cfg"
+    default: "/boot/grub/grub.cfg"
+
+_grub_update_cmd:
+  Debian: "update-grub"
+  Ubuntu: "update-grub"
+  RedHat: "grub2-mkconfig -o {{ grub_boot_path }}"
+  default: "update-grub"

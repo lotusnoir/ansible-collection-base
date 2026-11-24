@@ -38,7 +38,7 @@ See [variables](/defaults/main.yml) for more details.
           become_method: sudo
           gather_facts: true
           roles:
-            - role: ansible-system_extra_sec
+            - role: ansible-system_extra_sec or lotusnoir.base.system_extra_sec
 
 ## License
 

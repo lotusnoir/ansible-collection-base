@@ -1,8 +1,13 @@
 ---
-- name: "REDHAT | Deploy SSH RC"
-  ansible.builtin.template:
-    src: sshrc.j2
-    dest: /etc/ssh/sshrc
-    owner: root
-    group: root
-    mode: "0755"
+- name: "REDHAT | Vérifier que /etc/pam.d/sshd existe"
+  ansible.builtin.stat:
+    path: /etc/pam.d/sshd
+  register: pam_sshd_stat
+
+- name: "REDHAT | Remplacer toute ligne pam_motd par pam_exec pour le MOTD dynamique"
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/sshd
+    regexp: '^#?\s*session\s+\S+\s+pam_motd\.so.*$'
+    line: 'session    optional     pam_exec.so stdout /etc/motd.d/20-infos'
+    backup: true
+  when: pam_sshd_stat.stat.exists

@@ -1,26 +1,41 @@
 ---
+### GRUB default
 grub_default_path: "/etc/default/grub"
-# grub_options:
-#   - name: GRUB_TIMEOUT
-#     value: 2
-#   - name: GRUB_RECORDFAIL_TIMEOUT
-#     value: 2
+grub_default: 0
+grub_timeout: 2
+grub_distributor: '`( . /etc/os-release; echo ${NAME:-Ubuntu} ) 2>/dev/null || echo Ubuntu`'
+grub_cmdline_linux_default: []
+  #  - "ipv6.disable=1"
+  #  - "apparmor=1"
+  #  - "security=apparmor"
+  #  - "fsck.repair=yes"
+  #  - "fsck.mode=force"
+  #  - "iommu=force"
+  #  - "l1tf=full,force"
+  #  - "mce=0"
+  #  - "mds=full,nosmt"
+  #  - "page_alloc.shuffle=1"
+  #  - "pti=on"
+  #  - "rng_core.default_quality=500"
+  #  - "slab_nomerge=yes"
+  #  - "spec_store_bypass_disable=seccomp"
+  #  - "spectre_v2=on"
+grub_cmdline_linux: []
 
-## Add an extra argument on commandline
-# grub_add_cmdline: []
-#    - option: cgroup_enable
-#      value: memory
-
-## Add or edit /etc/grub.d/ files
+### GRUB files
+# grub_superuser_name: "root"
+### create a hash grub-mkpasswd-pbkdf2
+# grub_superuser_password_hash: "grub.pbkdf2.sha512.10000.XXXXXXXX...XXXX"
+#
 # grub_add_filed:
-#   #When no regex, add content to file or create a new file is not exist
 #   - file: 01_passwd
 #     value: |
-#       set superusers='root' password_pbkdf2 root grub.pbkdf2.sha512.10000.7C6DC0B6EA14D77D91C26[...]
+#       set superusers="{{ grub_superuser_name }}"
+#       password_pbkdf2 {{ grub_superuser_name }} {{ grub_superuser_password_hash }}
 #   #When regex is present, file must exist
 #   - file: 10_linux
-#     regex: 'CLASS="--class gnu-linux --class gnu --class os"'
-#     value: 'CLASS="--class gnu-linux --class gnu --class os --unrestricted"'
+#     regex: '(CLASS="--class gnu-linux --class gnu --class os)(")'
+#     value: '\1 --unrestricted\2'#
 
 ## Change mode to 600 for /boot/grub/grub.cfg
 grub_sec_bootloader: false

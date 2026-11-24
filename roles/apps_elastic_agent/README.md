@@ -38,7 +38,7 @@ See [variables](/defaults/main.yml) for more details.
           become_method: sudo
           gather_facts: true
           roles:
-            - role: ansible-apps_elastic_agent
+            - role: ansible-apps_elastic_agent or lotusnoir.base.apps_elastic_agent
 
 ## License
 

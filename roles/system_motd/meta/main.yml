@@ -2,38 +2,36 @@
 galaxy_info:
   author: lotusnoir
   role_name: system_motd
-  description: "Configure a cool dynamic motd"
+  description: "Configures a dynamic, OS-aware Message Of The Day (MOTD). This role removes the default/static MOTD and distribution-provided scripts (`update-motd.d` on Debian/Ubuntu, `motd.d` on RedHat), then deploys a custom `infos.sh.j2` script that displays live system information (OS release, filtered IP addresses, memory/swap usage, active SSH session count) on every login."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
   platforms:
     - name: "Ubuntu"
       versions:
-        - "focal"
         - "jammy"
         - "noble"
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
         - "trixie"
     - name: "Rocky"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "OracleLinux"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "RedHat"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
 
   galaxy_tags:
     - motd

@@ -3,20 +3,48 @@
   hosts: all
   become: true
   any_errors_fatal: true
+  gather_facts: false
 
-  vars:
-    grub_timeout: 5
-    grub_recordfail_timeout: "5"
-    grub_cmdline: "ipv6.disable=1 apparmor=1 security=apparmor"
-    grub_add_filed:
-      - file: 01_passwd
-        value: |
-          set superusers='root' password_pbkdf2 root grub.pbkdf2.sha512.10000.7C6DC0B6EA14D77D91C260C7410EDD5DF807295BE942849B574797
-      - file: 10_linux
-        regex: "CLASS="
-        value: "--unrestricted"
+  pre_tasks:
+    - name: Get minimal facts
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - distribution
 
   tasks:
     - name: Include role
       ansible.builtin.include_role:
         name: ansible-system_grub
+      vars:
+        grub_default_path: "/etc/default/grub"
+        grub_default: 0
+        grub_timeout: 2
+        grub_distributor: "`( . /etc/os-release; echo ${NAME:-Ubuntu} ) 2>/dev/null || echo Ubuntu`"
+        grub_cmdline_linux_default:
+          - ipv6.disable=1
+          - apparmor=1
+          - security=apparmor
+          - fsck.repair=yes
+          - fsck.mode=force
+          - iommu=force
+          - l1tf=full,force
+          - mce=0
+          - mds=full,nosmt
+          - page_alloc.shuffle=1
+          - pti=on
+          - rng_core.default_quality=500
+          - slab_nomerge=yes
+          - spec_store_bypass_disable=seccomp
+          - spectre_v2=on
+        grub_cmdline_linux: []
+        grub_superuser_name: "root"
+        grub_superuser_password_hash: "grub.pbkdf2.sha512.10000.5573598463B2FA5772AE90F1FD070DED373549A946DE79F0E555D349DE37E90DA4FE520063A6F5A8EB61B528F761DFE4DCA221512673EE70399B1B2BD137BE22.E32A7AC537312EB4149CA617D87F355CAA204E0E220EC2B51BD24F304CA4E4CFD24DBC978ADBEF4B11899D47AA14ECF908488606A8369AEA526D97B89E7432B9"
+        grub_add_filed:
+          - file: 01_passwd
+            value: |
+              set superusers="{{ grub_superuser_name }}"
+              password_pbkdf2 {{ grub_superuser_name }} {{ grub_superuser_password_hash }}
+          - file: 10_linux
+            regex: (CLASS="--class gnu-linux --class gnu --class os)(")
+            value: \1 --unrestricted\2

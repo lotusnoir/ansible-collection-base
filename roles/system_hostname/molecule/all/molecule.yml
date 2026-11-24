@@ -1,8 +1,13 @@
 ---
 dependency:
   name: galaxy
+  options:
+    role-file: requirements.yml
+    requirements-file: ""   # suppress collection install entirely if unsupported by your molecule_plugins version
+
 driver:
   name: docker
+
 scenario:
   name: all
   test_sequence:
@@ -11,22 +16,12 @@ scenario:
     - prepare
     - converge
     - idempotence
-    # - verify
     - destroy
 
 platforms:
-  - name: system-hostname-ubuntu20
-    image: lotusnoir/ansible_molecule_test_images:ubuntu20
-    pre_build_image: true
-    cgroupns_mode: host
-    privileged: true
-    capabilities: ["NET_ADMIN"]
-    volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:rw
-    groups:
-      - python3
   - name: system-hostname-ubuntu22
     image: lotusnoir/ansible_molecule_test_images:ubuntu22
+    pull: false
     pre_build_image: true
     cgroupns_mode: host
     privileged: true
@@ -36,6 +31,7 @@ platforms:
       - python3
   - name: system-hostname-ubuntu24
     image: lotusnoir/ansible_molecule_test_images:ubuntu24
+    pull: false
     pre_build_image: true
     cgroupns_mode: host
     privileged: true
@@ -45,6 +41,7 @@ platforms:
       - python3
   - name: system-hostname-ubuntu26
     image: lotusnoir/ansible_molecule_test_images:ubuntu26
+    pull: false
     pre_build_image: true
     cgroupns_mode: host
     privileged: true
@@ -54,6 +51,7 @@ platforms:
       - python3
   - name: system-hostname-debian12
     image: lotusnoir/ansible_molecule_test_images:debian12
+    pull: false
     pre_build_image: true
     cgroupns_mode: host
     privileged: true
@@ -63,15 +61,7 @@ platforms:
       - python3
   - name: system-hostname-debian11
     image: lotusnoir/ansible_molecule_test_images:debian11
-    pre_build_image: true
-    cgroupns_mode: host
-    privileged: true
-    volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:rw
-    groups:
-      - python3
-  - name: system-hostname-debian10
-    image: lotusnoir/ansible_molecule_test_images:debian10
+    pull: false
     pre_build_image: true
     cgroupns_mode: host
     privileged: true
@@ -81,6 +71,7 @@ platforms:
       - python3
   - name: system-hostname-debian13
     image: lotusnoir/ansible_molecule_test_images:debian13
+    pull: false
     pre_build_image: true
     cgroupns_mode: host
     privileged: true
@@ -90,6 +81,7 @@ platforms:
       - python3
   - name: system-hostname-rocky10
     image: lotusnoir/ansible_molecule_test_images:rocky10
+    pull: false
     pre_build_image: true
     cgroupns_mode: host
     privileged: true
@@ -99,6 +91,7 @@ platforms:
       - python3
   - name: system-hostname-rocky8
     image: lotusnoir/ansible_molecule_test_images:rocky8
+    pull: false
     pre_build_image: true
     cgroupns_mode: host
     privileged: true
@@ -108,6 +101,7 @@ platforms:
       - python3
   - name: system-hostname-rocky9
     image: lotusnoir/ansible_molecule_test_images:rocky9
+    pull: false
     pre_build_image: true
     cgroupns_mode: host
     privileged: true
@@ -117,6 +111,7 @@ platforms:
       - python3
   - name: system-hostname-oraclelinux10
     image: lotusnoir/ansible_molecule_test_images:oraclelinux10
+    pull: false
     pre_build_image: true
     cgroupns_mode: host
     privileged: true
@@ -126,6 +121,7 @@ platforms:
       - python3
   - name: system-hostname-oraclelinux8
     image: lotusnoir/ansible_molecule_test_images:oraclelinux8
+    pull: false
     pre_build_image: true
     cgroupns_mode: host
     privileged: true
@@ -135,6 +131,37 @@ platforms:
       - python3
   - name: system-hostname-oraclelinux9
     image: lotusnoir/ansible_molecule_test_images:oraclelinux9
+    pull: false
+    pre_build_image: true
+    cgroupns_mode: host
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    groups:
+      - python3
+  - name: system-hostname-redhat10
+    image: lotusnoir/ansible_molecule_test_images:redhat10
+    pull: false
+    pre_build_image: true
+    cgroupns_mode: host
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    groups:
+      - python3
+  - name: system-hostname-redhat8
+    image: lotusnoir/ansible_molecule_test_images:redhat8
+    pull: false
+    pre_build_image: true
+    cgroupns_mode: host
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    groups:
+      - python3
+  - name: system-hostname-redhat9
+    image: lotusnoir/ansible_molecule_test_images:redhat9
+    pull: false
     pre_build_image: true
     cgroupns_mode: host
     privileged: true

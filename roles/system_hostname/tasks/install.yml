@@ -9,10 +9,11 @@
   until: __pkg_result is success
   when: hostname_ensure_dbus | bool
 
-- name: Ensure dbus.socket is running
-  ansible.builtin.service:
+- name: Ensure dbus is enabled and running
+  ansible.builtin.systemd:
     name: dbus.socket
     state: started
+    enabled: true
   when: hostname_ensure_dbus | bool
 
 - name: Update hosts file
@@ -41,4 +42,4 @@
   when:
     - item in services
     - _newname.changed
-    - hostname_restart_services|length >0
+    - hostname_restart_services | length > 0

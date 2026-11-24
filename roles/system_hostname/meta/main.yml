@@ -2,38 +2,36 @@
 galaxy_info:
   author: lotusnoir
   role_name: system_hostname
-  description: "Configure hostname and /etc/hosts"
+  description: "Configures the system hostname and manages `/etc/hosts` content. This role renders `/etc/hosts` from a template (base content + optional extra content + optional IPv6 defaults), sets the hostname via systemd, and optionally restarts services impacted by the hostname change."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
   platforms:
     - name: "Ubuntu"
       versions:
-        - "focal"
         - "jammy"
         - "noble"
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
         - "trixie"
     - name: "Rocky"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "OracleLinux"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "RedHat"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
 
   galaxy_tags:
     - hosts

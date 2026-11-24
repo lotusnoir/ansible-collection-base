@@ -12,6 +12,7 @@ motd_script_default: true
 motd_script_default_priority: 20
 # Role script info options
 motd_check_boot_device: false
+motd_check_pending_reboot: false
 motd_boot_device: sda
 motd_print_processes: false
 motd_print_ansible_groups: false

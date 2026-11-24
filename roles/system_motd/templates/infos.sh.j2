@@ -1,4 +1,5 @@
 #!/bin/bash
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 ################################
 # colors
@@ -17,14 +18,13 @@ COLOR_RESET="\e[0m"
 function success () { echo -e "${GREEN}${*}${COLOR_RESET}";}
 function warning () { echo -e "${YELLOW}${*}${COLOR_RESET}";}
 function alert () { echo -e "${RED}${*}${COLOR_RESET}";}
-function comment () { echo -e "${CYAN}${*}${COLOR_RESET}"; }
 function info () { echo -e "${WHITE}${*}${COLOR_RESET}";}
 
 ################################
 # Functions
 ################################
 # system uptime
-# Retrurn warning if uptime < 0 days
+# Return warning if uptime < 1 day
 colorize_uptime () {
   uptime=$(cut -f1 -d. /proc/uptime)
   upDays=$((uptime/60/60/24))
@@ -41,29 +41,45 @@ colorize_uptime () {
 }
 
 colorize_memory () {
-    MEMORY=$(free | grep Mem | awk '{printf "%2d", 100-(($6+$4+$5)/$2) * 100.0}')
+    MEMORY=$(free | awk '/Mem:/ {printf "%d", ($3/$2)*100}')
     if [ "$MEMORY" -gt 90 ]; then
         alert "${MEMORY}%"
         return 100
     elif [ "$MEMORY" -gt 80 ] && [ "$MEMORY" -le 90 ] ; then
         warning "${MEMORY}%"
         return 1
-    elif [ "$MEMORY" -le 80 ]; then
+    else
         success "${MEMORY}%"
     fi
 }
 
 colorize_swap () {
-    SWAP=$(free | grep Swap | awk '{printf "%2d", ($3+$6)/$2 * 100.0}')
+    SWAP=$(free | awk '/Swap:/ {total=$2; used=$3; if (total==0) {printf "0"} else {printf "%d", (used/total)*100}}')
     if [ "$SWAP" -gt 80 ]; then
         alert "${SWAP}%"
         return 100
     elif [ "$SWAP" -gt 50 ] && [ "$SWAP" -le 80 ] ; then
         warning "${SWAP}%"
         return 1
-    elif [ "$SWAP" -le 50 ]; then
+    else
         success "${SWAP}%"
     fi
+}
+
+# Factored load judgment: colorize one load value against thresholds
+# $1 = value, $2 = trailing separator ("\c" or "")
+judge_load () {
+  local val="$1" sep="$2"
+  if awk -v l="$val" -v c="$SYS_CORE" 'BEGIN{exit !(l<c)}'; then
+      success "${val} ${sep}"
+      return 0
+  elif awk -v l="$val" -v c="$SYS_CORE_X2" 'BEGIN{exit !(l<c)}'; then
+      warning "${val} ${sep}"
+      return 1
+  else
+      alert "${val} ${sep}"
+      return 100
+  fi
 }
 
 colorize_load () {
@@ -72,83 +88,83 @@ colorize_load () {
   LOAD5=$(awk '{print $2}' /proc/loadavg)
   LOAD15=$(awk '{print $3}' /proc/loadavg)
 
-  #if load less than core = green
-  #if load between core and core x2 = yellow
-  #if load more than core x2 = red
   status=0
 
-  # --- LOAD1 ---
-  if [ "$(echo "${LOAD1} < ${SYS_CORE}" | bc)" -eq 1 ]; then
-      success "${LOAD1} \c"
-  elif [ "$(echo "${LOAD1} > ${SYS_CORE}" | bc)" -eq 1 ] && [ "$(echo "${LOAD1} < ${SYS_CORE_X2}" | bc)" -eq 1 ]; then
-      warning "${LOAD1} \c"
-      [ $status -lt 1 ] && status=1
-  elif [ "$(echo "${LOAD1} > ${SYS_CORE_X2}" | bc)" -eq 1 ]; then
-      alert "${LOAD1} \c"
-      status=100
-  fi
+  MSG1=$(judge_load "$LOAD1" "\c"); c1=$?
+  MSG5=$(judge_load "$LOAD5" "\c"); c5=$?
+  MSG15=$(judge_load "$LOAD15" ""); c15=$?
 
-  # --- LOAD5 ---
-  if [ "$(echo "${LOAD5} < ${SYS_CORE}" | bc)" -eq 1 ]; then
-      success "${LOAD5} \c"
-  elif [ "$(echo "${LOAD5} > ${SYS_CORE}" | bc)" -eq 1 ] && [ "$(echo "${LOAD5} < ${SYS_CORE_X2}" | bc)" -eq 1 ]; then
-      warning "${LOAD5} \c"
-      [ $status -lt 1 ] && status=1
-  elif [ "$(echo "${LOAD5} > ${SYS_CORE_X2}" | bc)" -eq 1 ]; then
-      alert "${LOAD5} \c"
-      status=100
-  fi
+  for c in "$c1" "$c5" "$c15"; do
+    [ "$c" -eq 100 ] && status=100
+    [ "$c" -eq 1 ] && [ "$status" -lt 1 ] && status=1
+  done
 
-  # --- LOAD15 ---
-  if [ "$(echo "${LOAD15} < ${SYS_CORE}" | bc)" -eq 1 ]; then
-      success "${LOAD15}"
-  elif [ "$(echo "${LOAD15} > ${SYS_CORE}" | bc)" -eq 1 ] && [ "$(echo "${LOAD15} < ${SYS_CORE_X2}" | bc)" -eq 1 ]; then
-      warning "${LOAD15}"
-      [ $status -lt 1 ] && status=1
-  elif [ "$(echo "${LOAD15} > ${SYS_CORE_X2}" | bc)" -eq 1 ]; then
-      alert "${LOAD15}"
-      status=100
-  fi
-
+  echo -n "$MSG1$MSG5$MSG15"
   return $status
+}
+
+# Colorize disk usage per mounted filesystem: only the percentage is colored
+# (green <=80%, yellow 80-90%, red >90%)
+colorize_disk () {
+  local worst_status=0
+  local output=""
+  while read -r mount used_pct free; do
+    local pct="${used_pct%\%}"
+    local colored_pct
+    if [ "$pct" -gt 90 ]; then
+        colored_pct=$(alert "${used_pct}")
+        worst_status=100
+    elif [ "$pct" -gt 80 ] && [ "$pct" -le 90 ]; then
+        colored_pct=$(warning "${used_pct}")
+        [ "$worst_status" -lt 1 ] && worst_status=1
+    else
+        colored_pct=$(success "${used_pct}")
+    fi
+    output+="$(info "${mount} used:") ${colored_pct} $(info "free: ${free}") - "
+  done < <(timeout 3s df -Ph | grep mapper | awk '/\// {print $6,$5,$4}')
+  # trim trailing " - "
+  output="${output% - }"
+  echo -n "$output"
+  return $worst_status
 }
 
 ################################
 # SYSTEM VARS
 ################################
-# USER=`whoami`
-# CURRENT_USERS="Currently `users | wc -w` user(s) logged on"
-
-HOSTNAME=$(uname -n)
-SYS_CORE=$(awk -F: '/model name/ {core++} END {print core}' /proc/cpuinfo)
-SYS_CORE_X2=$(echo "$SYS_CORE" 2 | awk '{printf "%0.0f\n",$1*$2}')
-SYS_MEMORY=$(grep MemTotal /proc/meminfo | awk '{print $2}' | xargs -I {} echo "scale=0; {}/1024^2+1" | bc)
+HOSTNAME=$(hostname -f 2>/dev/null || uname -n)
+SYS_CORE=$(nproc)
+SYS_CORE_X2=$((SYS_CORE * 2))
+SYS_MEMORY=$(awk '/MemTotal/ {printf "%d", $2/1024/1024 + 1}' /proc/meminfo)
 HARDWARE="cpu: $SYS_CORE / memory: $SYS_MEMORY"
-IP=$(/sbin/ip -4 -o addr show scope global | awk '{gsub(/\/.*/,"",$4); print $4}' | grep -v "172." | sed ':a;N;$!ba;s/\n/ - /g')
-RELEASE="{{ ansible_facts.distribution }} {{ ansible_distribution_version }} {{ ansible_distribution_release }}"
+IP=$(timeout 2s ip -4 -o addr show scope global | awk '{gsub(/\/.*/,"",$4); print $4}' | grep -v "172\.\(1[6-9]\|2[0-9]\|3[0-1]\)\." | sed ':a;N;$!ba;s/\n/ - /g')
+RELEASE="$(. /etc/os-release && echo "$NAME $VERSION_ID")"
 
-# get swap file details
-#SWAP=`free -mh | grep "Swap" | awk '{print "used:",$4,"/",$2,"( free: ",$3,")"}' | sed 's/i//g'`
-
-# disk usage
-DISK_USAGE=$(df -Ph | grep mapper | awk '/\// {print $6,"used:",$5,"free:",$4}' | sed ':a;N;$!ba;s/\n/ - /g')
-
-
-# get processes
-PSA=$(ps -Afl | wc -l)
+# get processes (wc -l includes the header line from ps -Afl, hence the -1)
+PSA=$(( $(ps -Afl | wc -l) - 1 ))
 
 ###################################
 PRIMARY_DISK_CODE=0
 {% if motd_check_boot_device is sameas true %}
 PRIMARY_DEVICE={{ motd_boot_device }}
-PRIMARY_DISK=$(df | awk '$NF == "/" || $NF == "/boot" { print $1}' | grep "$PRIMARY_DEVICE" | wc -l)
+PRIMARY_DISK=$(timeout 3s df | awk '$NF == "/" || $NF == "/boot" { print $1}' | grep "$PRIMARY_DEVICE" | wc -l)
 if [ "$PRIMARY_DISK" -eq 0 ]; then
     alert "Wrong disk on boot, please reboot your system to fix"
     PRIMARY_DISK_CODE=100
 fi
 {% endif %}
 
-
+###################################
+# Pending reboot check (kernel update on RHEL-like, or marker file)
+PENDING_REBOOT_CODE=0
+{% if motd_check_pending_reboot is sameas true %}
+if [ -f /var/run/reboot-required ]; then
+    PENDING_REBOOT_CODE=100
+    alert "Reboot required (kernel/package update)"
+elif command -v needs-restarting &>/dev/null && ! needs-restarting -r &>/dev/null; then
+    PENDING_REBOOT_CODE=100
+    alert "Reboot required (kernel/package update)"
+fi
+{% endif %}
 
 ###################################
 # Ansible Roles
@@ -162,9 +178,8 @@ if [ "$ANSIBLE_GROUPS" == "ungrouped" ]; then
 fi
 {% endif %}
 
-
 ###################################
-# Print
+# Compute statuses
 
 MSG_UPTIME=$(colorize_uptime)
 UPTIME_CODE=$?
@@ -174,14 +189,19 @@ MSG_MEMORY=$(colorize_memory)
 MEMORY_CODE=$?
 MSG_SWAP=$(colorize_swap)
 SWAP_CODE=$?
+MSG_DISK=$(colorize_disk)
+DISK_CODE=$?
 
 STATE=0
-STATE=$((UPTIME_CODE + LOAD_CODE + MEMORY_CODE + SWAP_CODE + PRIMARY_DISK_CODE + ANSIBLE_CODE))
+STATE=$((UPTIME_CODE + LOAD_CODE + MEMORY_CODE + SWAP_CODE + DISK_CODE + PRIMARY_DISK_CODE + PENDING_REBOOT_CODE + ANSIBLE_CODE))
 
 if [ "$STATE" -ge 100 ]; then MARGIN_COLOR=$MARGIN_ALERT_COLOR;
 elif [ "$STATE" -ge 1 ] ; then MARGIN_COLOR=$MARGIN_WARNING_COLOR;
 else MARGIN_COLOR=$MARGIN_COLOR;
 fi
+
+###################################
+# Print
 
 echo -en " ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Hostname${COLOR_RESET}.............: $(info "$HOSTNAME")
  ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Hardware${COLOR_RESET}.............: $(info "$HARDWARE")
@@ -191,7 +211,7 @@ echo -en " ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Hostname${COLOR_RESET}.
  ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Load${COLOR_RESET}.................: $(echo "$MSG_LOAD") (1-5-15 min)
  ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Memory usage${COLOR_RESET}.........: $(echo "$MSG_MEMORY")
  ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Swap usage${COLOR_RESET}...........: $(echo "$MSG_SWAP")
- ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Disk usage${COLOR_RESET}...........: $(info "${DISK_USAGE}")
+ ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Disk usage${COLOR_RESET}...........: $(echo "$MSG_DISK")
 {% if motd_print_processes is sameas true %}
  ${MARGIN_COLOR}█${COLOR_RESET} ${BOLD_GRAY} Processes${COLOR_RESET}............: $(info "${PSA}" running)
 {% endif %}

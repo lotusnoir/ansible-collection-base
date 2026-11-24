@@ -48,6 +48,8 @@
     - name: "Installing requirements"
       ansible.builtin.package:
         name:
+          - bzip2
+          - gzip
           - unzip
           - tar
         state: present
@@ -68,8 +70,14 @@
       ansible.builtin.get_url:
         url: "{{ elastic_agent_dl_url }}"
         dest: "{{ elastic_agent_temp_dir }}/{{ elastic_agent_pkg_name }}"
-        timeout: 60
+        timeout: 300
         mode: "0644"
+        decompress: false
+        checksum: "sha512:{{ elastic_agent_dl_url }}.sha512"
+      register: __dl_result
+      retries: 3
+      delay: 5
+      until: __dl_result is success
       when:
         - elastic_agent_install_origin == "internet"
         - elastic_agent_dl_executor == "host"
@@ -78,8 +86,14 @@
       ansible.builtin.get_url:
         url: "{{ elastic_agent_dl_url }}"
         dest: "{{ elastic_agent_temp_dir }}/{{ elastic_agent_pkg_name }}"
-        timeout: 60
+        timeout: 300
         mode: "0644"
+        decompress: false
+        checksum: "sha512:{{ elastic_agent_dl_url }}.sha512"
+      register: __dl_result
+      retries: 3
+      delay: 5
+      until: __dl_result is success
       delegate_to: localhost
       become: false
       when:
@@ -116,7 +130,7 @@
       args:
         chdir: "{{ elastic_agent_temp_dir }}/{{ role_path | basename }}"
         executable: /bin/bash
-      no_log: true
+      # no_log: true
       changed_when: false
 
     - name: "Create dirs"
