@@ -1,0 +1,15 @@
+---
+- name: Install requirements
+  ansible.builtin.package:
+    name: dbus
+    state: present
+  register: __pkg_result
+  retries: 3
+  delay: 5
+  until: __pkg_result is success
+
+- name: Ensure dbus is enabled and running
+  ansible.builtin.systemd:
+    name: dbus.socket
+    state: started
+    enabled: true

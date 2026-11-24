@@ -1,0 +1,12 @@
+---
+- name: Populate service facts
+  ansible.builtin.service_facts:
+
+- name: Restart services
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: restarted
+  with_items: "{{ hostname_restart_services }}"
+  when:
+    - item in services
+    - _newname.changed

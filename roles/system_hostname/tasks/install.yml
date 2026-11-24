@@ -1,19 +1,6 @@
 ---
-- name: Install requirements
-  ansible.builtin.package:
-    name: dbus
-    state: present
-  register: __pkg_result
-  retries: 12
-  delay: 10
-  until: __pkg_result is success
-  when: hostname_ensure_dbus | bool
-
-- name: Ensure dbus is enabled and running
-  ansible.builtin.systemd:
-    name: dbus.socket
-    state: started
-    enabled: true
+- name: Manage dbus
+  ansible.builtin.include_tasks: dbus.yml
   when: hostname_ensure_dbus | bool
 
 - name: Update hosts file
@@ -23,7 +10,7 @@
     owner: root
     group: root
     mode: '0644'
-    backup: 'yes'
+    backup: true
 
 - name: Set hostname
   ansible.builtin.hostname:
@@ -31,15 +18,6 @@
     use: systemd
   register: _newname
 
-- name: Populate service facts
-  ansible.builtin.service_facts:
-
-- name: Restart services
-  ansible.builtin.service:
-    name: "{{ item }}"
-    state: restarted
-  with_items: "{{ hostname_restart_services }}"
-  when:
-    - item in services
-    - _newname.changed
-    - hostname_restart_services | length > 0
+- name: Manage service restart
+  ansible.builtin.include_tasks: restart_services.yml
+  when: hostname_restart_services | length > 0
