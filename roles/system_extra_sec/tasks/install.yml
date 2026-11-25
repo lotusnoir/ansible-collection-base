@@ -5,51 +5,50 @@
     path: /etc/security/pwquality.conf
     regexp: "^{{ item }}"
     line: "{{ item }}"
-    mode: 420
+    mode: '0644'
     state: present
-  with_items:
+  loop:
     - "dcredit = -1"
     - "lcredit = -1"
     - "ocredit = -1"
     - "ucredit = -1"
     - "minlen = 16"
     - "minclass = 4"
-  when:
-    - extra_sec_pwquality_update | bool
+  when: extra_sec_pwquality_update | bool
+  tags: [pwquality]
 
 - name: "Create crontab.allow if not exists"
   ansible.builtin.copy:
     content: "{{ extra_sec_crontab_allow_content }}"
-    dest: "{{ item }}"
-    force: "no"
+    dest: /etc/cron.allow
+    force: false
     owner: root
     group: "{{ 'crontab' if ansible_facts.os_family == 'Debian' else 'root' }}"
-    mode: "640"
-  with_items:
-    - /etc/cron.allow
+    mode: '0640'
   when: extra_sec_crontab_allow | bool
+  tags: [cron_allow]
 
 - name: "Create at.allow if not exists"
   ansible.builtin.copy:
     content: "{{ extra_sec_at_allow_content }}"
-    dest: "{{ item }}"
-    force: "no"
+    dest: /etc/at.allow
+    force: false
     owner: root
     group: root
-    mode: "600"
-  with_items:
-    - /etc/at.allow
+    mode: '0600'
   when: extra_sec_at_allow | bool
+  tags: [at_allow]
 
 - name: "Replace issue content"
   ansible.builtin.copy:
     content: "{{ extra_sec_issue_content }}"
     dest: "{{ item }}"
-    mode: "0600"
-  with_items:
+    mode: '0644'
+  loop:
     - /etc/issue
     - /etc/issue.net
   when: extra_sec_issue_update | bool
+  tags: [issue]
 
 - name: Set password encryption method to yescrypt
   ansible.builtin.lineinfile:
@@ -57,50 +56,80 @@
     regexp: '^ENCRYPT_METHOD'
     line: 'ENCRYPT_METHOD    YESCRYPT'
     state: present
+  when:
+    - extra_sec_encrypt_method_update | bool
+    - ansible_facts.os_family == "Debian" or (ansible_facts.os_family == "RedHat" and (ansible_facts.distribution_major_version | int) >= 9)
+  tags: [password_policy]
 
-- name: Ensure rounds=11 is set on pam_unix.so password line
+- name: Ensure rounds are set on pam_unix.so password line (Debian)
   ansible.builtin.lineinfile:
     path: /etc/pam.d/common-password
     backrefs: true
     regexp: '^(password\s+\[success=\d+ default=ignore\]\s+pam_unix\.so(?:(?!rounds=).)*)$'
-    line: '\1 rounds=11'
+    line: '\1 rounds={{ extra_sec_pam_rounds }}'
   when:
-    - ansible_facts['os_family'] == "Debian"
+    - extra_sec_pam_rounds_update | bool
+    - ansible_facts.os_family == "Debian"
+  tags: [password_policy]
 
-- name: Get all local users from /etc/passwd
-  ansible.builtin.getent:
-    database: passwd
-    split: ':'
-
-- name: Create local_users variable from the getent output
-  ansible.builtin.set_fact:
-    local_users: '{{ ansible_facts.getent_passwd | dict2items }}'
-
-- name: Test for existence home directories to avoid creating them.
-  ansible.builtin.stat:
-    path: '{{ item.value[4] }}'
-  register: path_exists
-  loop: '{{ local_users }}'
+- name: Ensure rounds are set on pam_unix.so password line (RedHat family)
+  ansible.builtin.lineinfile:
+    path: "{{ item }}"
+    backrefs: true
+    regexp: '^(password\s+sufficient\s+pam_unix\.so(?:(?!rounds=).)*)$'
+    line: '\1 rounds={{ extra_sec_pam_rounds }}'
+  loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
   when:
-    - item.value[1]|int >= 1000
-    - item.value[1]|int != 65534
-    - item.value[4] != "/"
+    - extra_sec_pam_rounds_update | bool
+    - ansible_facts.os_family == "RedHat"
+  tags: [password_policy]
 
-- name: Ensure interactive local users have proper permissions on their respective home directories
-  ansible.builtin.file:
-    path: '{{ item.0.value[4] }}'
-    mode: u-s,g-w-s,o=-
-    follow: false
-    recurse: true
-  loop: '{{ local_users | zip(path_exists.results) | list }}'
-  when:
-    - item.1.stat is defined and item.1.stat.exists
+- name: Harden interactive users' home directory permissions
+  when: extra_sec_home_perms_update | bool
+  tags: [home_perms]
+  block:
+    - name: Get all local/LDAP users from passwd (NSS)
+      ansible.builtin.getent:
+        database: passwd
+        split: ':'
+
+    - name: Build local_users variable from the getent output
+      ansible.builtin.set_fact:
+        local_users: '{{ ansible_facts.getent_passwd | dict2items }}'
+
+    - name: Test for existence of home directories to avoid creating them
+      ansible.builtin.stat:
+        path: '{{ item.value[4] }}'
+      register: path_exists
+      loop: '{{ local_users }}'
+      loop_control:
+        label: "{{ item.key }}"
+      when:
+        - item.value[1] | int >= extra_sec_home_perms_min_uid
+        - item.value[1] | int != 65534
+        - item.value[4] != "/"
+
+    - name: Ensure interactive local users have proper permissions on their home directories
+      ansible.builtin.file:
+        path: '{{ item.0.value[4] }}'
+        mode: u-s,g-w-s,o=-
+        follow: false
+        recurse: true
+      loop: '{{ local_users | zip(path_exists.results) | list }}'
+      loop_control:
+        label: "{{ item.0.key }}"
+      when:
+        - item.1.stat is defined and item.1.stat.exists
 
 - name: "Change log permissions"
   ansible.builtin.command: find /var/log -type f -exec chmod g-wx,o-rwx '{}' + -o -type d -exec chmod g-w,o-rwx '{}' +
+  register: __extra_sec_log_perms
   changed_when: false
-  failed_when: false
+  failed_when: __extra_sec_log_perms.rc != 0
   when: extra_sec_logs_perms | bool
+  tags: [logs_perms]
 
 - name: "Change umask in /etc/init.d/rc"
   ansible.builtin.lineinfile:
@@ -108,91 +137,14 @@
     regexp: "^umask 022"
     line: umask 027
   when: extra_sec_umask_rc | bool
+  tags: [umask]
 
-- name: Désactiver les consoles TTY 2 à 6
+- name: Disable extra TTY consoles (getty@tty2-6 by default)
   ansible.builtin.systemd:
     name: "getty@tty{{ item }}.service"
     enabled: false
     masked: true
     state: stopped
-  loop: [2, 3, 4, 5, 6]
-
-###
-# Failed to determine supported controllers: No such process
-# Failed to allocate manager object: No such process
-# user@1831700500.service: Main process exited, code=exited, status=1/FAILURE
-# user@1831700500.service: Failed with result 'exit-code'.
-# Failed to start User Manager for UID 1831700500.
-#
-# - name: Configure group for reading other processes
-#   group:
-#     state: present
-#     name: proc
-#     system: yes
-#
-# - name: Ensure configuration directory for whitelisted services exist
-#   file:
-#     state: directory
-#     path: "/etc/systemd/system/{{ item }}.d"
-#     owner: root
-#     group: root
-#     mode: u=rwx,g=rx,o=rx
-#   loop:
-#     - systemd-logind.service
-#     - user@.service
-#
-# - name: Configure whitelisted services to adapt to hidepid setting
-#   copy:
-#     content: |
-#       [Service]
-#       SupplementaryGroups=proc
-#     dest: "/etc/systemd/system/{{ item }}.d/proc_hidepid_whitelist.conf"
-#     owner: root
-#     group: root
-#     mode: u=rw,g=r,o=r
-#   loop:
-#     - systemd-logind.service
-#     - user@.service
-#
-# - meta: end_play
-#
-# ###############################
-
-# - name: "change permissions on files"
-#   ansible.builtin.file:
-#     path: /etc/group-
-#     owner: root
-#     group: root
-#     mode: "u-x,go-rwx"
-#   with_items:
-#     - /etc/group-
-#     - /etc/passwd-
-#     - /etc/motd
-#
-# - name: "remove files"
-#   ansible.builtin.file:
-#     path: "{{ item }}"
-#     state: absent
-#   with_items:
-#     - /etc/cron.deny
-#     - /etc/at.deny
-#
-# ##############
-# - name: "Check for logrotate.conf"
-#   ansible.builtin.stat:
-#     path: '/etc/logrotate.conf'
-#   changed_when: false
-#   register: logrotate_file
-#
-# #############
-# - name: Ensure group "sugroup" exists
-#   ansible.builtin.group:
-#     name: sugroup
-#     state: present
-#
-# - name: Ensure access to the su command is restricted - CIS 5.7
-#   ansible.builtin.lineinfile:
-#     path: /etc/pam.d/su
-#     regexp: '^auth required pam_wheel.so use_uid group=sugroup'
-#     line: auth required pam_wheel.so use_uid group=sugroup
-#     insertafter: "^auth       sufficient pam_rootok.so"
+  loop: "{{ extra_sec_disable_extra_ttys_list }}"
+  when: extra_sec_disable_extra_ttys | bool
+  tags: [tty]

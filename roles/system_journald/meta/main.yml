@@ -2,38 +2,36 @@
 galaxy_info:
   author: lotusnoir
   role_name: system_journald
-  description: "Configures systemd-journald"
+  description: "Configures systemd-journald via /etc/systemd/journald.conf, using a simple key/value dict rendered as-is under the [Journal] section. Optionally wipes the persistent journal directory. With default variables (empty journald_config), this role changes nothing on the system."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
   platforms:
     - name: "Ubuntu"
       versions:
-        - "focal"
         - "jammy"
         - "noble"
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
         - "trixie"
     - name: "Rocky"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "OracleLinux"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "RedHat"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
 
   galaxy_tags:
     - system

@@ -2,40 +2,39 @@
 galaxy_info:
   author: lotusnoir
   role_name: system_cron
-  description: "Configure crontabs and jobs"
+  description: "Manages /etc/crontab system-wide schedule and arbitrary cron jobs (user crontabs or /etc/cron.d/ files) via the native ansible.builtin.cron module. With default variables, this role deploys the role's default /etc/crontab content (standard Debian-style hourly/daily/weekly/monthly run-parts) and configures no additional cron job."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
   platforms:
     - name: "Ubuntu"
       versions:
-        - "focal"
         - "jammy"
         - "noble"
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
         - "trixie"
     - name: "Rocky"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "OracleLinux"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "RedHat"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
 
   galaxy_tags:
+    - system
     - cron
     - crontabs
 

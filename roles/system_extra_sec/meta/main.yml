@@ -2,38 +2,36 @@
 galaxy_info:
   author: lotusnoir
   role_name: system_extra_sec
-  description: "Configures extra sec CIS recommandation not supported by other modules"
+  description: "Applies extra CIS-style security hardening not covered by dedicated roles: password quality policy, password hashing algorithm/rounds, login banners, cron/at access restriction, interactive users' home directory permissions, log file permissions, default umask, and extra TTY consoles. Every hardening action is gated by its own boolean variable (all false by default except issue banner) — with default variables, this role only deploys the login banner (/etc/issue, /etc/issue.net) and changes nothing else on the system."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
   platforms:
     - name: "Ubuntu"
       versions:
-        - "focal"
         - "jammy"
         - "noble"
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
         - "trixie"
     - name: "Rocky"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "OracleLinux"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "RedHat"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
 
   galaxy_tags:
     - system

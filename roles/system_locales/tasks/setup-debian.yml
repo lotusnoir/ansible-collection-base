@@ -10,70 +10,79 @@
   when:
     - locales_present is defined
     - locales_present | length > 0
+  tags: [locales_packages]
 
 - name: "UBUNTU | Install language packs"
   ansible.builtin.package:
     name:
-      - "language-pack-{{ item.split('_')[:1] | join('') }}"
-      - "language-pack-{{ item.split('_')[:1] | join('') }}-base"
+      - "language-pack-{{ item.split('_')[0] | lower }}"
+      - "language-pack-{{ item.split('_')[0] | lower }}-base"
     state: present
   register: __pkg_result
   retries: 12
   delay: 10
   until: __pkg_result is success
-  with_items: "{{ locales_present }}"
+  loop: "{{ locales_present }}"
   when:
     - ansible_facts.distribution == 'Ubuntu'
     - locales_present is defined
     - locales_present | length > 0
+    - '"_" in item'   # skip locales without a language_COUNTRY form (e.g. C.UTF-8)
   notify: Update locales
+  tags: [locales_packages]
 
 - name: "UBUNTU | Remove language packs"
   ansible.builtin.package:
     name:
-      - "language-pack-{{ item.split('_')[:1] | join('') }}"
-      - "language-pack-{{ item.split('_')[:1] | join('') }}-base"
+      - "language-pack-{{ item.split('_')[0] | lower }}"
+      - "language-pack-{{ item.split('_')[0] | lower }}-base"
     state: absent
   register: __pkg_result
   retries: 12
   delay: 10
   until: __pkg_result is success
-  with_items: "{{ locales_absent }}"
+  loop: "{{ locales_absent }}"
   when:
     - ansible_facts.distribution == 'Ubuntu'
     - locales_absent is defined
     - locales_absent | length > 0
+    - '"_" in item'
   notify: Update locales
+  tags: [locales_packages]
 
 - name: "DEBIAN | Detect locale gen file"
   ansible.builtin.stat:
     path: "{{ locales_gen_file }}"
-  register: locales_gen_file
+  register: __locales_gen_file_stat
+  tags: [locales_gen]
 
 - name: "DEBIAN | Create locale gen file if not exist"
   ansible.builtin.file:
     path: "{{ locales_gen_file }}"
     mode: '0644'
     state: touch
-  when: not locales_gen_file.stat.exists
+  when: not __locales_gen_file_stat.stat.exists
+  tags: [locales_gen]
 
 - name: "DEBIAN | Ensure locales are present"
   community.general.locale_gen:
     name: "{{ item }}"
     state: present
-  with_items: "{{ locales_present }}"
+  loop: "{{ locales_present }}"
   when:
     - locales_present is defined
     - locales_present | length > 0
+  tags: [locales_gen]
 
 - name: "DEBIAN | Ensure locales are absent"
   community.general.locale_gen:
     name: "{{ item }}"
     state: absent
-  with_items: "{{ locales_absent }}"
+  loop: "{{ locales_absent }}"
   when:
     - locales_absent is defined
     - locales_absent | length > 0
+  tags: [locales_gen]
 
 - name: "DEBIAN | Set default locale"
   ansible.builtin.template:
@@ -85,8 +94,9 @@
   when:
     - locales_default is defined
     - locales_default | length > 0
+  tags: [locales_default]
 
-- name: "DEBIAN | Ensure keyboard-configuration package is installed"
+- name: "DEBIAN | Ensure console-setup package is installed"
   ansible.builtin.apt:
     name: console-setup
     state: present
@@ -94,6 +104,7 @@
   retries: 12
   delay: 10
   until: __pkg_result is success
+  tags: [locales_keyboard]
 
 - name: "DEBIAN | Set keymap"
   ansible.builtin.template:
@@ -103,3 +114,4 @@
     group: root
     mode: '0644'
   notify: Reconfigure keyboard
+  tags: [locales_keyboard]

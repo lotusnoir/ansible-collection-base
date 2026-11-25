@@ -2,6 +2,7 @@
 - name: Prepare
   hosts: all
   gather_facts: true
+
   pre_tasks:
     - name: Update apt cache.
       ansible.builtin.apt:
@@ -19,3 +20,8 @@
         state: started
         enabled: true
       when: ansible_facts.os_family == 'RedHat' and (ansible_facts.distribution_major_version | int) >= 9
+
+    - name: Ensure cron/crond package is installed for verification
+      ansible.builtin.package:
+        name: "{{ 'cron' if ansible_facts.os_family == 'Debian' else 'cronie' }}"
+        state: present

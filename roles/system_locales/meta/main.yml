@@ -2,41 +2,41 @@
 galaxy_info:
   author: lotusnoir
   role_name: system_locales
-  description: "Configure system language"
+  description: "Configures system locales (installed language packs, generated locales, default LANG/LC_* variables) and console keyboard layout. Debian/Ubuntu use locale-gen + language packs + /etc/default/locale + /etc/default/keyboard; RedHat family use langpacks/glibc-langpack + localectl. With default variables (no locales_present/locales_default), the role only enforces the US keyboard layout (locales_keyboard_layout) and leaves installed locales/default LANG untouched."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
   platforms:
     - name: "Ubuntu"
       versions:
-        - "focal"
         - "jammy"
         - "noble"
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
         - "trixie"
     - name: "Rocky"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "OracleLinux"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "RedHat"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
 
   galaxy_tags:
+    - system
     - language
     - locales
+    - keyboard
 
 dependencies: []

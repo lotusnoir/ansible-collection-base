@@ -2,43 +2,42 @@
 galaxy_info:
   author: lotusnoir
   role_name: system_autologin
-  description: "Install user ssh key and sudo nopassword"
+  description: "Deploys SSH public keys (authorized_keys) and grants passwordless sudo (NOPASSWD) for a list of users. Home directories are created automatically if missing, pre-filled from /etc/skel, with ownership resolved via getent (local passwd or LDAP/NSS) — no hardcoded group, safe for LDAP-backed accounts. With default variables (no autologin_users defined), this role changes nothing on the system."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
   platforms:
     - name: "Ubuntu"
       versions:
-        - "focal"
         - "jammy"
         - "noble"
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
         - "trixie"
     - name: "Rocky"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "OracleLinux"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "RedHat"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
 
   galaxy_tags:
-    - nopasswd
+    - system
+    - autologin
     - sudo
     - ssh
-    - key
+    - nopasswd
 
 dependencies: []

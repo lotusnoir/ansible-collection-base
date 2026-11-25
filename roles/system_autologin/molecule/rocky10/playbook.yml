@@ -12,11 +12,11 @@
           - '!all'
           - distribution
 
-  vars:
-    autologin_users:
-      - {name: johnd, key: "ssh-ed25519 AAAAC3NzaC1asdad8sd7as0asfasf5as4fa7sfa0sf0-af8"}
-
   tasks:
     - name: Include role
       ansible.builtin.include_role:
         name: ansible-system_autologin
+      vars:
+        autologin_users:
+          - name: autologintestuser
+            key: ssh-ed25519 AAAAC3NzaC1asdad8sd7as0asfasf5as4fa7sfa0sf0-af8

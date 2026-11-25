@@ -10,9 +10,12 @@
     - journald_config is defined
     - journald_config | length > 0
   notify: Restart systemd-journald
+  tags: [journald_config]
 
 - name: "Wipe persistent journal directory"
   ansible.builtin.file:
     path: /var/log/journal
     state: absent
-  when: journald_wipe_persistent
+  when: journald_wipe_persistent | bool
+  notify: Restart systemd-journald
+  tags: [journald_wipe]

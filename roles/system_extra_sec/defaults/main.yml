@@ -14,3 +14,11 @@ extra_sec_crontab_allow_content: |
 extra_sec_at_allow: false
 extra_sec_at_allow_content: |
   root
+
+extra_sec_encrypt_method_update: false
+extra_sec_pam_rounds_update: false
+extra_sec_pam_rounds: 11
+extra_sec_home_perms_update: false
+extra_sec_home_perms_min_uid: 1000
+extra_sec_disable_extra_ttys: false
+extra_sec_disable_extra_ttys_list: [2, 3, 4, 5, 6]
