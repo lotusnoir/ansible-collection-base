@@ -4,9 +4,10 @@
     name: logrotate
     state: present
   register: __pkg_result
-  retries: 12
-  delay: 10
+  retries: 3
+  delay: 5
   until: __pkg_result is success
+  tags: [logrotate_package]
 
 - name: "Change default config"
   ansible.builtin.template:
@@ -15,9 +16,12 @@
     owner: root
     group: root
     mode: "0644"
+    validate: "logrotate -d %s"
   when:
     - logrotate_default_conf is defined
     - logrotate_default_conf | length > 0
+  notify: Force logrotate run
+  tags: [logrotate_config]
 
 - name: "Setup logrotate.d files"
   ansible.builtin.template:
@@ -26,10 +30,15 @@
     owner: root
     group: root
     mode: "0640"
-  with_items: "{{ logrotate_apps_conf }}"
+    validate: "logrotate -d %s"
+  loop: "{{ logrotate_apps_conf }}"
+  loop_control:
+    label: "{{ item.name }}"
   when:
     - logrotate_apps_conf is defined
     - logrotate_apps_conf | length > 0
+  notify: Force logrotate run
+  tags: [logrotate_apps]
 
 - name: Ensure /var/log has correct permissions and ownership
   ansible.builtin.file:
@@ -38,8 +47,5 @@
     group: root
     mode: "0755"
     state: directory
-
-- name: "Execute logrotate"
-  ansible.builtin.command: logrotate -vf /etc/logrotate.conf
-  when: logrotate_execute
-  changed_when: false
+  when: logrotate_var_log_perms_update | bool
+  tags: [logrotate_var_log_perms]

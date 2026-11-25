@@ -1,0 +1,8 @@
+---
+- name: Force logrotate run
+  become: true
+  ansible.builtin.command: logrotate -vf /etc/logrotate.conf
+  register: __logrotate_exec
+  changed_when: "'rotating pattern' in __logrotate_exec.stdout"
+  failed_when: __logrotate_exec.rc != 0
+  when: logrotate_execute | bool

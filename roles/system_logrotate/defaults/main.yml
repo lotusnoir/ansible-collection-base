@@ -40,3 +40,5 @@ logrotate_apps_conf: []
 #      dfsdfsdfsdf sdfsdf
 #      dfsdfsdfsdf sdfsdf
 #      dfsdfsdfsdf sdfsdf
+
+logrotate_var_log_perms_update: false
