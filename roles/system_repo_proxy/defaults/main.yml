@@ -1,8 +1,8 @@
 ---
 ## proxy settings
-repo_proxy_scheme: "http"
-repo_proxy_server: "squid.exemple.com"
-repo_proxy_port: "3128"
+repo_proxy_scheme: ""
+repo_proxy_server: ""
+repo_proxy_port: ""
 repo_proxy_user: ""
 repo_proxy_password: ""
 

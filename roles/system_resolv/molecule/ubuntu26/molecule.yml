@@ -22,6 +22,7 @@ scenario:
 platforms:
   - name: system-resolv-ubuntu26
     image: lotusnoir/ansible_molecule_test_images:ubuntu26
+    pull: false
     command: ${MOLECULE_DOCKER_COMMAND:-""}
     cgroupns_mode: host
     pre_build_image: true

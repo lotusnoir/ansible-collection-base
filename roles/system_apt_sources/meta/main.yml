@@ -2,22 +2,20 @@
 galaxy_info:
   author: lotusnoir
   role_name: system_apt_sources
-  description: "Configures /etc/apt/sources.list"
+  description: "Configures `/etc/apt/sources.list` for Debian and Ubuntu, with optional disk-footprint and apt behavior tweaks: disabling release-change alerts, removing documentation/man pages, limiting installed locales, disabling package caches, compressing indexes, forcing IPv4, periodic auto-update, and pinning against backports kernels. With default variables, the role overwrites `sources.list` using sane defaults (security + updates enabled, backports/proposed/debug disabled) but leaves all the optional footprint/behavior tweaks untouched (all `false`/empty by default)."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
   platforms:
     - name: "Ubuntu"
       versions:
-        - "focal"
         - "jammy"
         - "noble"
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
         - "trixie"
 
   galaxy_tags:

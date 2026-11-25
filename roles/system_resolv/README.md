@@ -9,13 +9,6 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-- [Description](#description)
-- [Requirements](#requirements)
-- [Role variables](#role-variables)
-- [Examples](#examples)
-- [License](#license)
-- [Author Information](#author-information)
-
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Description
@@ -28,34 +21,37 @@ none
 
 ## Role variables
 
-See [variables](/defaults/main.yml) for more details.
+See [variables](/defaults/main.yml) for the full list with raw defaults.
 
 With default variables, this role dont change anything on the system. You need to set the config variables like in the exemple in order to start configuration.
+
 
 ## Examples
 
 
-        ---
-        - hosts: system_resolv
-          become: true
-          become_method: sudo
-          gather_facts: true
-          roles:
-            - role: ansible-system_resolv
-          vars:
-            resolv_resolvconf_remove: true
-            resolv_nameservers:
-              - "127.0.0.1"
-              - "10.0.0.1"
-              - "10.0.0.2"
-            resolv_domain: "example.com"
-            resolv_search:
-              - "example.com"
-            resolv_options:
-              - "timeout:2"
-              - "attempts:1"
-              - "rotate"
+```yaml
+---
+- hosts: system_resolv
+  become: true
+  become_method: sudo
+  gather_facts: true
+  roles:
+    - role: ansible-system_resolv # or lotusnoir.base.system_resolv
+vars:
+    resolv_resolvconf_remove: true
+    resolv_nameservers:
+      - "127.0.0.1"
+      - "10.0.0.1"
+      - "10.0.0.2"
+    resolv_domain: "example.com"
+    resolv_search:
+      - "example.com"
+    resolv_options:
+      - "timeout:2"
+      - "attempts:1"
+      - "rotate"
 
+```
 
 ## License
 

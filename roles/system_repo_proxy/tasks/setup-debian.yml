@@ -1,9 +1,9 @@
 ---
 - name: "DEBIAN | Change Proxy configuration"
   when:
-    - repo_proxy_scheme is defined and repo_proxy_scheme | length > 0
-    - repo_proxy_server is defined and repo_proxy_server | length > 0
-    - repo_proxy_port is defined and repo_proxy_port | int > 0
+    - repo_proxy_scheme | default('') | length > 0
+    - repo_proxy_server | default('') | length > 0
+    - repo_proxy_port | default('') | length > 0
   block:
     - name: "DEBIAN | Make sure to remove proxy configuration in main config"
       ansible.builtin.lineinfile:
@@ -15,7 +15,7 @@
       ansible.builtin.file:
         path: "{{ item }}"
         state: absent
-      with_items: "{{ apt_proxy_remove }}"
+      loop: "{{ apt_proxy_remove }}"
       when:
         - apt_proxy_remove is defined
         - apt_proxy_remove | length > 0
@@ -31,9 +31,10 @@
     - name: "DEBIAN | Update repositories cache"
       ansible.builtin.apt:
         update_cache: true
+        cache_valid_time: 3600
       register: __pkg_result
-      retries: 12
-      delay: 10
+      retries: 3
+      delay: 5
       until: __pkg_result is success
       when:
         - repo_proxy_update_cache is defined

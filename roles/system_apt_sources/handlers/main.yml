@@ -1,8 +1,10 @@
 ---
-- name: "Updating apt cache"
+- name: Update apt cache
   ansible.builtin.apt:
     update_cache: true
+    cache_valid_time: 3600
   register: __pkg_result
-  retries: 12
-  delay: 10
+  retries: 3
+  delay: 5
   until: __pkg_result is success
+  when: apt_sources_update_cache | bool

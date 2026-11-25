@@ -4,12 +4,14 @@
     src: sources.list.j2
     dest: /etc/apt/sources.list
     mode: "0644"
+  notify: Update apt cache
 
 - name: "Allow release change"
   ansible.builtin.template:
     src: releaseinfochange.j2
     dest: /etc/apt/apt.conf.d/99releaseinfochange
     mode: "0644"
+  notify: Update apt cache
   when: apt_sources_remove_release_change_alert | bool
 
 - name: "Include non-free firware alert"
@@ -21,6 +23,7 @@
     src: nodoc.j2
     dest: /etc/dpkg/dpkg.cfg.d/01_nodoc
     mode: "0644"
+  notify: Update apt cache
   when: apt_sources_exclude_man | bool or apt_sources_include_locales | length > 0
 
 - name: "Disable apt caches"
@@ -28,6 +31,7 @@
     src: nocache.j2
     dest: /etc/apt/apt.conf.d/02_nocache
     mode: "0644"
+  notify: Update apt cache
   when: apt_sources_disable_caches | bool
 
 - name: "Compress indexes"
@@ -35,6 +39,7 @@
     src: compress_indexes.j2
     dest: /etc/apt/apt.conf.d/02_compress_indexes
     mode: "0644"
+  notify: Update apt cache
   when: apt_sources_compress_indexes | bool
 
 - name: "Ignore additional or suggested packages"
@@ -42,6 +47,7 @@
     src: no_additional.j2
     dest: /etc/apt/apt.conf.d/02_no_additional
     mode: "0644"
+  notify: Update apt cache
   when: apt_sources_ignore_additional | bool
 
 - name: "Force connection with ipv4"
@@ -49,6 +55,7 @@
     src: templates/force-ipv4.j2
     dest: /etc/apt/apt.conf.d/99_force-ipv4
     mode: "0644"
+  notify: Update apt cache
   when: apt_sources_force_ipv4 | bool
 
 - name: "Add periodic apt update"
@@ -56,6 +63,7 @@
     src: templates/auto_update.j2
     dest: /etc/apt/apt.conf.d/99_auto_update
     mode: "0644"
+  notify: Update apt cache
   when: apt_sources_auto_update | bool
 
 - name: "Enable no_backports_kernel"
@@ -63,19 +71,12 @@
     src: no_backports_kernel.j2
     dest: /etc/apt/preferences.d/no-backports-kernel
     mode: "0644"
+  notify: Update apt cache
   when: apt_sources_no_backports_kernel | bool
 
 - name: "Disable no_backports_kernel"
   ansible.builtin.file:
     path: /etc/apt/preferences.d/no-backports-kernel
     state: absent
+  notify: Update apt cache
   when: not apt_sources_no_backports_kernel | bool
-
-- name: "Update apt cache"
-  ansible.builtin.apt:
-    update_cache: true
-  register: __pkg_result
-  retries: 12
-  delay: 10
-  until: __pkg_result is success
-  when: apt_sources_update_cache | bool

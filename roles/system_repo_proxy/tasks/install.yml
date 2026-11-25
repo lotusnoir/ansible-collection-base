@@ -5,10 +5,20 @@
     - repo_proxy_configure is defined
     - not repo_proxy_configure | bool
 
-- name: Debian tasks
-  ansible.builtin.import_tasks: setup-debian.yml
+- name: "Warn if proxy config incomplete"
+  ansible.builtin.debug:
+    msg: >-
+      repo_proxy_scheme/repo_proxy_server/repo_proxy_port are not all set:
+      no proxy configuration will be applied.
+  when: >-
+    (repo_proxy_scheme | default('') | length == 0) or
+    (repo_proxy_server | default('') | length == 0) or
+    (repo_proxy_port | default('') | length == 0)
+
+- name: "Debian tasks"
+  ansible.builtin.include_tasks: setup-debian.yml
   when: ansible_facts.os_family == 'Debian'
 
-- name: Redhat tasks
-  ansible.builtin.import_tasks: setup-redhat.yml
+- name: "Redhat tasks"
+  ansible.builtin.include_tasks: setup-redhat.yml
   when: ansible_facts.os_family in ["RedHat", "Rocky", "OracleLinux"]

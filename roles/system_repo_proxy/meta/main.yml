@@ -2,38 +2,36 @@
 galaxy_info:
   author: lotusnoir
   role_name: system_repo_proxy
-  description: "Configure proxy on repository"
+  description: "Configures a repository proxy for package managers: writes `Acquire::http::Proxy` / `Acquire::https::Proxy` directives on Debian family (`apt`), and `proxy=` lines in `/etc/yum.conf` plus proxy settings in `/etc/rhsm/rhsm.conf` (if present) on RedHat family. Can be fully disabled per-host via `repo_proxy_configure: false`."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
   platforms:
     - name: "Ubuntu"
       versions:
-        - "focal"
         - "jammy"
         - "noble"
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
         - "trixie"
     - name: "Rocky"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "OracleLinux"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "RedHat"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
 
   galaxy_tags:
     - proxy

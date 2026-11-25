@@ -2,38 +2,36 @@
 galaxy_info:
   author: lotusnoir
   role_name: system_profile
-  description: "Configure profile for users"
+  description: "Configures shell profile content for all users. Three independent mechanisms are available: inserting a block directly into `/etc/profile`, creating/removing individual scripts under `/etc/profile.d/` from inline content, and copying external script files into `/etc/profile.d/` via a glob pattern. With default variables the role changes nothing on the system."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
   platforms:
     - name: "Ubuntu"
       versions:
-        - "focal"
         - "jammy"
         - "noble"
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
         - "trixie"
     - name: "Rocky"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "OracleLinux"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "RedHat"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
 
   galaxy_tags:
     - system
