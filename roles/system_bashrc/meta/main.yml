@@ -2,38 +2,36 @@
 galaxy_info:
   author: lotusnoir
   role_name: system_bashrc
-  description: "Configure bashrc for any users"
+  description: "Configures `.bashrc` for the skeleton directory (new user creation template) and/or for a specific list of existing users. Ships a default bash configuration (colored prompt, history tuning, common aliases, extract/repeat helper functions) that can be fully overridden per user or replaced entirely with custom content. Each configured user is resolved via `getent` (local passwd or LDAP/NSS), so home directories for LDAP-backed accounts are detected automatically. With default variables, this role changes nothing on the system."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
   platforms:
     - name: "Ubuntu"
       versions:
-        - "focal"
         - "jammy"
         - "noble"
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
         - "trixie"
     - name: "Rocky"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "OracleLinux"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "RedHat"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
 
   galaxy_tags:
     - system

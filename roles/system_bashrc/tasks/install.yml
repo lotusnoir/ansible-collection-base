@@ -7,12 +7,47 @@
   when:
     - bashrc_configure_skel | bool
 
-- name: "Create a new bashrc for user"
+- name: Check existence of configured users via getent (local/LDAP/NSS)
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item }}"
+    fail_key: false
+  loop: "{{ bashrc_users_configure }}"
+  register: __bashrc_getent_users
+  changed_when: false
+  tags: [setup]
+
+- name: Warn about users not found via getent (skipped)
+  ansible.builtin.debug:
+    msg: >-
+      User '{{ item.item }}' listed in bashrc_users_configure was not found
+      via getent (local passwd / LDAP / NSS) — skipping bashrc deployment
+      for this user.
+  loop: "{{ __bashrc_getent_users.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.ansible_facts.getent_passwd[item.item] is none
+  tags: [setup]
+
+- name: Deploy bashrc for configured users
   ansible.builtin.template:
     src: bashrc.j2
-    dest: "{% if item == 'root' %}/root{% else %}{{ bashrc_users_home[item] | default(bashrc_users_default_home + '/' + item) }}{% endif %}/.bashrc"
-    mode: '0640'
-  with_items: "{{ bashrc_users_configure }}"
-  when:
-    - bashrc_users_configure is defined
-    - bashrc_users_configure | length > 0
+    dest: "{{ __bashrc_user_home }}/.bashrc"
+    owner: "{{ item.item }}"
+    group: "{{ item.item }}"
+    mode: "0640"
+  loop: "{{ __bashrc_getent_users.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+    loop_var: item
+  vars:
+    __bashrc_user_home: >-
+      {{
+        '/root' if item.item == 'root' else
+        bashrc_users_home[item.item] | default(
+          (item.ansible_facts.getent_passwd[item.item][4] | default(omit))
+          | default(bashrc_users_default_home ~ '/' ~ item.item, true)
+        )
+      }}
+  when: item.ansible_facts.getent_passwd[item.item] is not none    # <-- le fix
+  tags: [bashrc]

@@ -2,6 +2,7 @@
 - name: Prepare
   hosts: all
   gather_facts: true
+
   pre_tasks:
     - name: Update apt cache.
       ansible.builtin.apt:
@@ -19,3 +20,9 @@
         state: started
         enabled: true
       when: ansible_facts.os_family == 'RedHat' and (ansible_facts.distribution_major_version | int) >= 9
+
+    - name: Create a test local user for bashrc verification
+      ansible.builtin.user:
+        name: bashrctestuser
+        state: present
+        create_home: true
