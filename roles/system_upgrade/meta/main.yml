@@ -2,38 +2,36 @@
 galaxy_info:
   author: lotusnoir
   role_name: system_upgrade
-  description: "Upgrade all packages"
+  description: "Upgrades system packages on Debian/Ubuntu (apt) and RedHat/Rocky/OracleLinux (dnf) family hosts, with package hold/unhold support, optional cleanup of unneeded packages, and optional automatic reboot when required. With default variables, this role changes nothing on the system (upgrade_simulation: true) — it only reports what would be upgraded."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
   platforms:
     - name: "Ubuntu"
       versions:
-        - "focal"
         - "jammy"
         - "noble"
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
         - "trixie"
     - name: "Rocky"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "OracleLinux"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "RedHat"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
 
   galaxy_tags:
     - upgrade

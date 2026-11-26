@@ -1,20 +1,10 @@
 ---
-- name: Install
-  ansible.builtin.apt:
-    name: "{{ updatedb_dependencies }}"
-    state: "{{ apt_install_state | default('latest') }}"
-    update_cache: true
-  register: __pkg_result
-  retries: 12
-  delay: 10
-  until: __pkg_result is success
+- name: "Debian family tasks"
+  ansible.builtin.import_tasks: setup-debian.yml
+  when: ansible_facts.os_family == "Debian"
+  tags: [updatedb_package, updatedb_config]
 
-- name: Configure /etc/updatedb.conf
-  ansible.builtin.template:
-    src: updatedb.conf.j2
-    dest: /etc/updatedb.conf
-    owner: root
-    group: root
-    mode: '0644'
-    backup: true
-  notify: Update updatedb
+- name: "RedHat family tasks"
+  ansible.builtin.import_tasks: setup-redhat.yml
+  when: ansible_facts.os_family == "RedHat"
+  tags: [updatedb_package, updatedb_config]

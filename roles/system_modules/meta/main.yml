@@ -2,40 +2,39 @@
 galaxy_info:
   author: lotusnoir
   role_name: system_modules
-  description: "Add or remove kernel modules"
+  description: "Manages kernel modules: load specific modules at boot, blacklist unwanted modules, and configure per-module options (modprobe.d). A blacklist or options file change automatically triggers an initramfs regeneration (update-initramfs on Debian, dracut on RedHat family). With default variables, this role only ensures the kmod package is installed on RedHat family and changes no module configuration."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
   platforms:
     - name: "Ubuntu"
       versions:
-        - "focal"
         - "jammy"
         - "noble"
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
         - "trixie"
     - name: "Rocky"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "OracleLinux"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
     - name: "RedHat"
       versions:
+        - "10"
         - "8"
         - "9"
-        - "10"
 
   galaxy_tags:
+    - system
     - modules
     - kernel
 

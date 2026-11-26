@@ -17,6 +17,7 @@ COLOR_RESET="\e[0m"
 
 function success () { echo -e "${GREEN}${*}${COLOR_RESET}";}
 function warning () { echo -e "${YELLOW}${*}${COLOR_RESET}";}
+function comment () { echo -e "${CYAN}${*}${COLOR_RESET}"; }
 function alert () { echo -e "${RED}${*}${COLOR_RESET}";}
 function info () { echo -e "${WHITE}${*}${COLOR_RESET}";}
 

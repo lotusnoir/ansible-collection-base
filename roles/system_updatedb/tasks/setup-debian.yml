@@ -1,0 +1,25 @@
+---
+- name: "DEBIAN | Install"
+  become: true
+  ansible.builtin.apt:
+    name: "{{ updatedb_dependencies }}"
+    state: "{{ apt_install_state | default('present') }}"
+    update_cache: true
+    cache_valid_time: 3600
+  register: __pkg_result
+  retries: 3
+  delay: 5
+  until: __pkg_result is success
+  tags: [updatedb_package]
+
+- name: "DEBIAN | Configure /etc/updatedb.conf"
+  become: true
+  ansible.builtin.template:
+    src: updatedb.conf.j2
+    dest: /etc/updatedb.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+  notify: Update updatedb
+  tags: [updatedb_config]

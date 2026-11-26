@@ -3,20 +3,26 @@
   hosts: all
   become: true
   any_errors_fatal: true
+  gather_facts: false
 
-  vars:
-    upgrade_simulation: false
-    upgrade_pkgs_confirmation: false
-    upgrade_reboot_confirmation: false
-    upgrade_autoreboot: true
-    upgrade_clean: true
-    upgrade_hold_pkg:
-      - openssl*
-      - openssh*
-    upgrade_unhold_pkg:
-      - dbus
+  pre_tasks:
+    - name: Get minimal facts
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - distribution
 
   tasks:
     - name: Include role
       ansible.builtin.include_role:
         name: ansible-system_upgrade
+      vars:
+        upgrade_simulation: false
+        upgrade_pkgs_confirmation: false
+        upgrade_autoreboot: true
+        upgrade_clean: true
+        upgrade_hold_pkg:
+          - openssl*
+          - openssh*
+        upgrade_unhold_pkg:
+          - dbus

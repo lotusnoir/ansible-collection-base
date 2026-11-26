@@ -28,34 +28,31 @@
   tags: always
 
 ### Success run flag
-- name: "Ensure /var/cache/ansible exists"
-  become: true
-  ansible.builtin.file:
-    path: /var/cache/ansible
-    state: directory
-    owner: root
-    group: root
-    mode: '0755'
+- name: Manage success run flag
   when:
     - ansible_facts.os_family in ["Debian", "RedHat"]
     - success_run_flag is defined
     - success_run_flag | bool
-  changed_when: false
-  failed_when: false
   tags: always
+  block:
+    - name: "Ensure /var/cache/ansible exists"
+      become: true
+      ansible.builtin.file:
+        path: /var/cache/ansible
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      changed_when: false
+      failed_when: false
 
-- name: "Creation Successful run flag"
-  become: true
-  ansible.builtin.copy:
-    dest: "/var/cache/ansible/{{ role_path | basename }}"
-    content: "{{ ansible_date_time.iso8601 }}"
-    owner: root
-    group: root
-    mode: '0644'
-  when:
-    - ansible_facts.os_family in ["Debian", "RedHat"]
-    - success_run_flag is defined
-    - success_run_flag | bool
-  changed_when: false
-  failed_when: false
-  tags: always
+    - name: "Creation Successful run flag"
+      become: true
+      ansible.builtin.copy:
+        dest: "/var/cache/ansible/{{ role_path | basename }}"
+        content: "{{ ansible_date_time.iso8601 }}"
+        owner: root
+        group: root
+        mode: '0644'
+      changed_when: false
+      failed_when: false

@@ -2,23 +2,36 @@
 galaxy_info:
   author: lotusnoir
   role_name: system_updatedb
-  description: "Install and configure mlocate with updatedb"
+  description: "Installs and configures the locate database tool (mlocate on all supported targets by default, locate on Debian 13, plocate on Ubuntu 24/26) and its /etc/updatedb.conf, including a prunepaths/prunefs/prunenames policy and an automatic updatedb run on config change. With default variables, this role installs mlocate (or the OS-specific package) and applies a standard prune policy."
   license: "Apache License, Version 2.0"
   min_ansible_version: "2.8"
 
   platforms:
     - name: "Ubuntu"
       versions:
-        - "focal"
         - "jammy"
         - "noble"
         - "resolute"
     - name: "Debian"
       versions:
-        - "buster"
-        - "bullseye"
         - "bookworm"
+        - "bullseye"
         - "trixie"
+    - name: "Rocky"
+      versions:
+        - "10"
+        - "8"
+        - "9"
+    - name: "OracleLinux"
+      versions:
+        - "10"
+        - "8"
+        - "9"
+    - name: "RedHat"
+      versions:
+        - "10"
+        - "8"
+        - "9"
 
   galaxy_tags:
     - mlocate

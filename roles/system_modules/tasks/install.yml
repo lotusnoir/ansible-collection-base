@@ -8,6 +8,7 @@
   delay: 10
   until: __pkg_result is success
   when: ansible_facts.os_family in ["RedHat", "Rocky", "OracleLinux"]
+  tags: [modules_package]
 
 - name: "Configure modules to load at boot"
   ansible.builtin.template:
@@ -17,6 +18,7 @@
     group: root
     mode: '0644'
   when: modules_load | length > 0
+  tags: [modules_load]
 
 - name: "Load modules now"
   community.general.modprobe:
@@ -24,6 +26,7 @@
     state: present
   loop: "{{ modules_load }}"
   when: modules_load | length > 0
+  tags: [modules_load]
 
 - name: "Blacklisting modules"
   ansible.builtin.template:
@@ -34,20 +37,31 @@
     mode: '0644'
   when: modules_blacklist | length > 0
   notify: "Update initramfs"
+  tags: [modules_blacklist]
 
 - name: "Unload blacklisted modules if loaded"
   community.general.modprobe:
     name: "{{ item }}"
     state: absent
   loop: "{{ modules_blacklist }}"
-  failed_when: false
+  register: __modules_unload
+  failed_when:
+    - __modules_unload is failed
+    - "'Module unloading is not supported' not in (__modules_unload.msg | default(''))"
+    - "'in use' not in (__modules_unload.msg | default(''))"
   when: modules_blacklist | length > 0
+  tags: [modules_blacklist]
 
 - name: "Create module options files"
   ansible.builtin.template:
     src: modules_options.conf.j2
-    dest: "{{ _modules_modprobe_dir }}/{{ item }}.conf"
+    dest: "{{ _modules_modprobe_dir }}/{{ item.key }}.conf"
     owner: root
     group: root
     mode: "0644"
-  with_items: "{{ modules_options }}"
+  loop: "{{ modules_options | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: modules_options | length > 0
+  notify: "Update initramfs"
+  tags: [modules_options]

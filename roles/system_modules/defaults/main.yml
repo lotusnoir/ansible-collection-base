@@ -8,7 +8,7 @@ modules_load: []
 modules_blacklist: []
 #  - i2c_piix4
 
-modules_options: []
+modules_options: {}
 #  nf_conntrack:
 #    options nf_conntrack hashsize=65536
 #    options nf_conntrack max=262144

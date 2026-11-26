@@ -1,32 +1,41 @@
 ---
-- name: "DEBIAN | Force kill stuck APT processes"
-  ansible.builtin.shell: |
-    set -o pipefail
-    pgrep -a 'apt|dpkg' || true
-    pgrep -a 'apt|dpkg' >/tmp/apt_pids.txt || true
-    if [ -s /tmp/apt_pids.txt ]; then
-      echo "Killing stuck APT processes:"
-      cat /tmp/apt_pids.txt
-      pkill -9 -f 'apt|dpkg' || true
-    else
-      echo "No stuck APT processes found."
-    fi
-  args:
-    executable: /bin/bash
-  register: apt_kill
-  changed_when: "'Killing stuck APT processes' in apt_kill.stdout"
+- name: "DEBIAN | Detect stuck APT processes"
+  ansible.builtin.command: pgrep -a 'apt|dpkg'
+  register: apt_stuck_check
+  changed_when: false
   failed_when: false
+  tags: [upgrade_run]
+
+- name: "DEBIAN | Warn about stuck APT processes"
+  ansible.builtin.debug:
+    msg: >-
+      Stuck APT/dpkg processes detected: {{ apt_stuck_check.stdout_lines }}.
+      Set upgrade_force_kill_stuck_apt=true to force-kill them (risk: dpkg
+      corruption if a legitimate transaction is in progress).
+  when: apt_stuck_check.rc == 0
+  tags: [upgrade_run]
+
+- name: "DEBIAN | Force kill stuck APT processes (opt-in only)"
+  ansible.builtin.command: pkill -9 -f 'apt|dpkg'
+  when:
+    - apt_stuck_check.rc == 0
+    - upgrade_force_kill_stuck_apt | bool
+  changed_when: true
+  tags: [upgrade_run]
 
 - name: "DEBIAN | apt-get update"
+  become: true
   ansible.builtin.apt:
-    update-cache: true
+    update_cache: true
   changed_when: false
   register: __pkg_result
   retries: 12
   delay: 10
   until: __pkg_result is success
+  tags: [upgrade_run]
 
 - name: "DEBIAN | Install required package to print results"
+  become: true
   ansible.builtin.apt:
     name: "{{ required_package }}"
     state: present
@@ -34,83 +43,72 @@
   retries: 12
   delay: 10
   until: __pkg_result is success
+  tags: [upgrade_run]
 
 # Hold specific package
 - name: "DEBIAN | list actual hold packages"
   ansible.builtin.command: apt-mark showhold
   register: _upgrade_hold_pkg_actual
   changed_when: false
+  tags: [upgrade_hold]
 
-- name: "DEBIAN | we list the hold pkgs not holded yet"
+- name: "DEBIAN | list the hold pkgs not holded yet"
   ansible.builtin.set_fact:
     pkg_to_hold: "{{ upgrade_hold_pkg | difference(_upgrade_hold_pkg_actual.stdout_lines) }}"
   when:
     - upgrade_hold_pkg is defined
     - upgrade_hold_pkg | length > 0
+  tags: [upgrade_hold]
 
-- name: "DEBIAN | we list the unhold pkgs not holded yet"
+- name: "DEBIAN | list the unhold pkgs still holded"
   ansible.builtin.set_fact:
     pkg_to_unhold: "{{ upgrade_unhold_pkg | intersect(_upgrade_hold_pkg_actual.stdout_lines) }}"
   when:
     - upgrade_unhold_pkg is defined
     - upgrade_unhold_pkg | length > 0
+  tags: [upgrade_hold]
 
-- name: "DEBIAN | holding packages"
-  ansible.builtin.shell: |
-    set -o pipefail
-    apt-mark hold {{ pkg_to_hold | join(' ') }} >/dev/null 2>&1 || true
-  args:
-    executable: /bin/bash
-  changed_when: false
+- name: "DEBIAN | hold packages"
+  become: true
+  ansible.builtin.command: "apt-mark hold {{ pkg_to_hold | join(' ') }}"
+  changed_when: true
   when:
     - pkg_to_hold is defined
     - pkg_to_hold | length > 0
+  tags: [upgrade_hold]
 
-- name: "DEBIAN | UNhold packages to update them"
-  ansible.builtin.shell: |
-    set -o pipefail
-    apt-mark unhold {{ pkg_to_unhold | join(' ') }} >/dev/null 2>&1 || true
-  args:
-    executable: /bin/bash
-  changed_when: false
+- name: "DEBIAN | unhold packages to update them"
+  become: true
+  ansible.builtin.command: "apt-mark unhold {{ pkg_to_unhold | join(' ') }}"
+  changed_when: true
   when:
     - pkg_to_unhold is defined
     - pkg_to_unhold | length > 0
+  tags: [upgrade_hold]
 
-- name: "DEBIAN | get list of pending upgrades"
-  ansible.builtin.command: apt-get --simulate dist-upgrade
-  register: apt_simulate
-  changed_when: false
-
-- name: "DEBIAN | parse apt-get output to get list of changed packages"
-  ansible.builtin.set_fact:
-    updates: "{{ apt_simulate.stdout_lines | select('match', '^  ') | list | sort }}"
-  changed_when: false
-
-- name: "DEBIAN | apt-get collect upgradable packages"
-  ansible.builtin.shell: |
-    set -o pipefail
-    apt-get --just-print full-upgrade 2>&1 |
-      perl -ne 'if (/Inst\s([\w\-\d\.\~\:\+]+)\s\[([\w\-\d\.\~\:\+]+)\]\s\(([\w\-\d\.\~\:\+]+)\)? /i) {
-        print "PROGRAM=$1 INSTALLED=$2 AVAILABLE=$3\n"
-      }' | column -s ' ' -t
-  args:
-    executable: /bin/bash
+- name: "DEBIAN | collect upgradable packages"
+  ansible.builtin.command: apt-get --just-print full-upgrade
   register: apt_listonly
   changed_when: false
+  tags: [upgrade_run]
+  # noqa: command-instead-of-module
+  # No ansible.builtin.apt mode returns a structured per-package old/new
+  # version diff; this is a read-only dry-run, never changes state.
 
 - name: "DEBIAN | show pending updates"
   ansible.builtin.debug:
-    var: apt_listonly.stdout_lines
-  changed_when: false
+    msg: "{{ apt_listonly.stdout_lines | select('match', '^Inst ') | list }}"
+  tags: [upgrade_run]
 
-- name: "DEBIAN | Ask for upgrade"
+- name: "DEBIAN | ask for upgrade confirmation"
   ansible.builtin.pause:
-    prompt: "Do you want to update this files ?"
-  when: upgrade_pkgs_confirmation|bool
+    prompt: "Do you want to apply this upgrade?"
+  when: upgrade_pkgs_confirmation | bool
+  tags: [upgrade_run]
 
-# do the actual apt-get dist-upgrade, only on vms with pending updates
+# do the actual apt-get dist-upgrade, only on hosts with pending updates
 - name: "DEBIAN | apt-get dist-upgrade"
+  become: true
   ansible.builtin.apt:
     upgrade: dist
   register: __pkg_result
@@ -118,51 +116,60 @@
   delay: 10
   until: __pkg_result is success
   when:
-    - apt_listonly.stdout_lines is defined and apt_listonly.stdout_lines | length > 0
-    - not upgrade_simulation|bool
+    - apt_listonly.stdout_lines | select('match', '^Inst ') | list | length > 0
+    - not upgrade_simulation | bool
+  tags: [upgrade_run]
 
-- name: "DEBIAN | apt-get autoremove"
-  ansible.builtin.command: apt-get -y autoremove
-  changed_when: false
+- name: "DEBIAN | autoremove unneeded packages"
+  become: true
+  ansible.builtin.apt:
+    autoremove: true
   when:
     - upgrade_clean is defined
-    - upgrade_clean|bool
+    - upgrade_clean | bool
+  tags: [upgrade_clean]
 
-# check if we need a reboot, only on vms that updated
+# check if we need a reboot, only on hosts that updated
 - name: "DEBIAN | check if reboot needed"
   ansible.builtin.stat:
     path: /var/run/reboot-required
   register: reboot_required_file
   when:
-    - upgrade_autoreboot|bool
+    - upgrade_autoreboot | bool
+  tags: [upgrade_reboot]
 
-- name: "DEBIAN | Prompt for rebooting"
+- name: "DEBIAN | prompt before rebooting"
   ansible.builtin.pause:
     prompt: "Press ENTER to reboot {{ ansible_host }} now, or Ctrl+C to abort."
   when:
-    - upgrade_autoreboot|bool
+    - upgrade_autoreboot | bool
     - reboot_required_file.stat.exists
-    - upgrade_reboot_confirmation|bool
+    - upgrade_reboot_confirmation | bool
+  tags: [upgrade_reboot]
 
-- name: "DEBIAN | Rebooting machine"
+- name: "DEBIAN | rebooting machine"
+  become: true
   ansible.builtin.shell: sleep 2 && shutdown -r now "Ansible updates triggered"
-  changed_when: false
-  failed_when: false
+  changed_when: true
   async: 1
   poll: 0
   when:
-    - upgrade_autoreboot|bool
+    - upgrade_autoreboot | bool
     - reboot_required_file.stat.exists
+  tags: [upgrade_reboot]
 
-- name: "DEBIAN | Waiting for the machine to come back"
+# Always wait for the host to come back once a reboot has been triggered,
+# regardless of upgrade_reboot_confirmation — never leave the host silently down.
+- name: "DEBIAN | waiting for the machine to come back"
   become: false
   ansible.builtin.wait_for:
     host: "{{ ansible_host }}"
     state: started
     port: 22
     delay: 30
+    timeout: 300
   delegate_to: localhost
   when:
-    - upgrade_autoreboot|bool
+    - upgrade_autoreboot | bool
     - reboot_required_file.stat.exists
-    - upgrade_reboot_confirmation
+  tags: [upgrade_reboot]

@@ -21,3 +21,10 @@ upgrade_hold_pkg: []
 upgrade_unhold_pkg: []
 
 upgrade_yum_max_kernels: 2
+
+# Only kill stuck apt/dpkg processes if explicitly requested — never by default
+upgrade_force_kill_stuck_apt: false
+
+# RedHat: allow dnf to resolve upgrade conflicts by installing non-"best"
+# package versions. Masks dependency conflicts silently — opt-in only.
+upgrade_allow_nobest: false
