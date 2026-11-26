@@ -4,8 +4,11 @@
     src: bashrc.j2
     dest: "{{ bashrc_skel_file }}"
     mode: '0644'
+  vars:
+    bashrc_current_user: ~
   when:
     - bashrc_configure_skel | bool
+  tags: [setup]
 
 - name: Check existence of configured users via getent (local/LDAP/NSS)
   ansible.builtin.getent:
@@ -41,6 +44,7 @@
     label: "{{ item.item }}"
     loop_var: item
   vars:
+    bashrc_current_user: "{{ item.item }}"
     __bashrc_user_home: >-
       {{
         '/root' if item.item == 'root' else
@@ -49,5 +53,5 @@
           | default(bashrc_users_default_home ~ '/' ~ item.item, true)
         )
       }}
-  when: item.ansible_facts.getent_passwd[item.item] is not none    # <-- le fix
+  when: item.ansible_facts.getent_passwd[item.item] is not none
   tags: [bashrc]
