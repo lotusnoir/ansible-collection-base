@@ -1,10 +1,3 @@
 ---
-- name: "Debian family tasks"
-  ansible.builtin.import_tasks: setup-debian.yml
-  when: ansible_facts.os_family == "Debian"
-  tags: [updatedb_package, updatedb_config]
-
-- name: "RedHat family tasks"
-  ansible.builtin.import_tasks: setup-redhat.yml
-  when: ansible_facts.os_family == "RedHat"
-  tags: [updatedb_package, updatedb_config]
+- name: "Setup tasks"
+  ansible.builtin.include_tasks: "setup-{{ ansible_facts.os_family | lower }}.yml"
