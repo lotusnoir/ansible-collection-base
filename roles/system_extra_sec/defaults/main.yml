@@ -1,24 +1,46 @@
 ---
+## update password policy
 extra_sec_pwquality_update: false
+extra_sec_pwquality_settings:
+  dcredit: -1
+  lcredit: -1
+  ocredit: -1
+  ucredit: -1
+  minlen: 16
+  minclass: 4
 
-extra_sec_issue_update: true
-extra_sec_issue_content: "Authorized uses only. All activity may be monitored and reported.\n"
-
-extra_sec_logs_perms: false
-extra_sec_umask_rc: false
-
+## Set content in /etc/cron.allow
 extra_sec_crontab_allow: false
 extra_sec_crontab_allow_content: |
   root
 
+## Set content in /etc/at.allow
 extra_sec_at_allow: false
 extra_sec_at_allow_content: |
   root
 
+## Update login message
+extra_sec_issue_update: false
+extra_sec_issue_content: "Authorized uses only. All activity may be monitored and reported.\n"
+
+## Ensure YESCRYPT in login.def
 extra_sec_encrypt_method_update: false
+
+## Add secure
 extra_sec_pam_rounds_update: false
 extra_sec_pam_rounds: 11
+
+## check home permissions and secure it
 extra_sec_home_perms_update: false
 extra_sec_home_perms_min_uid: 1000
+
+## Remove extra tty
 extra_sec_disable_extra_ttys: false
 extra_sec_disable_extra_ttys_list: [2, 3, 4, 5, 6]
+
+extra_sec_logs_perms: false
+extra_sec_umask_rc: false
+
+## Update email for root account
+extra_sec_change_root_mail_alias: false
+extra_sec_postfix_root_mail_alias: "/dev/null"

@@ -3,17 +3,11 @@
   ansible.builtin.lineinfile:
     create: true
     path: /etc/security/pwquality.conf
-    regexp: "^{{ item }}"
-    line: "{{ item }}"
+    regexp: "^{{ item.key }}\\s*="
+    line: "{{ item.key }} = {{ item.value }}"
     mode: '0644'
     state: present
-  loop:
-    - "dcredit = -1"
-    - "lcredit = -1"
-    - "ocredit = -1"
-    - "ucredit = -1"
-    - "minlen = 16"
-    - "minclass = 4"
+  loop: "{{ extra_sec_pwquality_settings | dict2items }}"
   when: extra_sec_pwquality_update | bool
   tags: [pwquality]
 
@@ -123,6 +117,16 @@
       when:
         - item.1.stat is defined and item.1.stat.exists
 
+- name: Disable extra TTY consoles (getty@tty2-6 by default)
+  ansible.builtin.systemd:
+    name: "getty@tty{{ item }}.service"
+    enabled: false
+    masked: true
+    state: stopped
+  loop: "{{ extra_sec_disable_extra_ttys_list }}"
+  when: extra_sec_disable_extra_ttys | bool
+  tags: [tty]
+
 - name: "Change log permissions"
   ansible.builtin.command: find /var/log -type f -exec chmod g-wx,o-rwx '{}' + -o -type d -exec chmod g-w,o-rwx '{}' +
   register: __extra_sec_log_perms
@@ -139,12 +143,12 @@
   when: extra_sec_umask_rc | bool
   tags: [umask]
 
-- name: Disable extra TTY consoles (getty@tty2-6 by default)
-  ansible.builtin.systemd:
-    name: "getty@tty{{ item }}.service"
-    enabled: false
-    masked: true
-    state: stopped
-  loop: "{{ extra_sec_disable_extra_ttys_list }}"
-  when: extra_sec_disable_extra_ttys | bool
-  tags: [tty]
+- name: Configure System to Forward All Mail For The Root Account - Set /etc/aliases content if doesnt exist
+  ansible.builtin.copy:
+    dest: /etc/aliases
+    content: |
+      root: {{ extra_sec_postfix_root_mail_alias }}
+    mode: '0644'
+    force: false
+  when: extra_sec_change_root_mail_alias
+  notify: Update postfix aliases

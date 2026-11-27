@@ -1,0 +1,5 @@
+---
+- name: Update postfix aliases
+  ansible.builtin.command:
+    cmd: newaliases
+  changed_when: false
